@@ -1,0 +1,17 @@
+services:
+
+#    DuncrowGmbh\ContaoBabylonjsViewerBundle\Controller\ContentElement\MyContentElementController:
+#        tags:
+#            -   name: contao.content_element
+#                category: texts
+#                template: ce_my_content_element
+#                method: getCustomResponse
+#                renderer: esi
+#                type: my_custom_type
+    _defaults:
+        autowire: true
+        autoconfigure: true
+
+    DuncrowGmbh\ContaoBabylonjsViewerBundle\Controller\:
+        resource: ../../Controller
+        public: true

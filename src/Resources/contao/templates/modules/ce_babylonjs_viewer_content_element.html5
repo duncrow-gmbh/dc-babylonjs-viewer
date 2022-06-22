@@ -1,0 +1,237 @@
+<?php
+if (TL_MODE != 'BE') {
+
+    $GLOBALS['TL_HEAD'][] = '<script src="https://cdn.jsdelivr.net/npm/babylonjs@4.2.0/babylon.js"></script>';
+    $GLOBALS['TL_HEAD'][] = '<script src="https://cdn.jsdelivr.net/npm/babylonjs-loaders@4.2.0/babylonjs.loaders.min.js"></script>';
+
+    $settings = json_decode(html_entity_decode($this->dc_viewer_settings));
+    $files = array_map('\StringUtil::binToUuid', deserialize($this->dc_viewer_settings_files, true));
+
+    $objFile = [];
+    for($i = 0; $i < count($files); $i++){
+        $objFile[] = [(\FilesModel::findByUuid($files[$i]))->path, (\FilesModel::findByUuid($files[$i]))->extension];
+    }
+    $cameraSettings = ["radius","minZ","maxZ","minZoom","maxZoom","upperVerticalAngelLimit","lowerVerticalAngelLimit","upperHorizontalAngelLimit","lowerHorizontalAngelLimit","panningSensibility","wheelPrecision","useAutoRotationBehavior","rotationSpeed"];
+    $environmentSettings = ["createGround","groundSize","createSkybox","skyboxSize","skyboxColor","groundColor","groundShadowLevel","setupImageProcessing","cameraContrast","cameraExposure"];
+    $otherSettings = ["backgroundColor","deactivateViewerOnStart","highlightOnClick","highlightColor"];
+?>
+<!-- templates/ce_my_content_element.html5 -->
+<style>
+    .viewer-controller {
+        position: absolute;
+        top: 2rem;
+        right: 2rem;
+        background: white;
+        border-radius: 15px;
+        padding: 0.5rem;
+        -webkit-box-shadow: 0px 0px 8px 0px rgba(0,0,0,0.18);
+        box-shadow: 0px 0px 8px 0px rgba(0,0,0,0.18);
+    }
+    .disabled{
+        opacity: .875;
+    }
+    .loading-container{
+        display:hidden;
+        position:absolute;
+        left:0;
+        top:0;
+        width:100%;
+        height:100%;
+        background:rgba(255,255,255,.5);
+        z-index: 9999;
+    }
+    .lds-ring {
+        display: inline-block;
+        position: absolute;
+        left:50%;
+        top:50%;
+        transform:translate(-50%,-50%);
+        width: 80px;
+        height: 80px;
+    }
+    .lds-ring div {
+        box-sizing: border-box;
+        display: block;
+        position: absolute;
+        width: 64px;
+        height: 64px;
+        margin: 8px;
+        border: 8px solid #fff;
+        border-radius: 50%;
+        animation: lds-ring 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+        border-color: #fff transparent transparent transparent;
+    }
+    .lds-ring div:nth-child(1) {
+        animation-delay: -0.45s;
+    }
+    .lds-ring div:nth-child(2) {
+        animation-delay: -0.3s;
+    }
+    .lds-ring div:nth-child(3) {
+        animation-delay: -0.15s;
+    }
+    @keyframes lds-ring {
+        0% {
+            transform: rotate(0deg);
+        }
+        100% {
+            transform: rotate(360deg);
+        }
+    }
+    .icondeactivated{
+        display:block;
+    }
+    .iconactivated{
+        display:none;
+    }
+    .viewer-interaction.active .iconactivated{
+        display:block;
+    }
+    .viewer-interaction.active .icondeactivated {
+        display:none;
+    }
+
+</style>
+<div class="my-content-element">
+    <div id="canvas-container">
+        <div class="loading-container">
+            <div class="lds-ring"><div></div><div></div><div></div><div></div></div>
+        </div>
+        <canvas id="canvas3d-<?=$this->id;?>" style="width:100%;height:100%;"></canvas>
+        <div class="viewer-controller">
+            <a class="viewer-interaction">
+                <img class="icondeactivated" src="bundles/contaobabylonjsviewer/images/3D-interact-1.png">
+                <img class="iconactivated" src="bundles/contaobabylonjsviewer/images/3D-interact-2.png">
+            </a>
+        </div>
+    </div>
+    <script type="module">
+
+        import * as DSB from "./bundles/contaobabylonjsviewer/js/duncrow-bjs-viewer.js";
+
+
+        if(typeof BABYLON !== 'undefined'){
+            function changeInteraction(){
+                if(userInteractionEnabled){
+                    jQuery('#canvas3d-<?=$this->id;?>').removeClass('disabled');
+                    jQuery('.viewer-interaction').removeClass('active');
+
+                }else{
+                    jQuery('#canvas3d-<?=$this->id;?>').addClass('disabled');
+                    jQuery('.viewer-interaction').addClass('active');
+                }
+                viewer.userInteractionEnabled = userInteractionEnabled;
+            }
+
+            let userInteractionEnabled = true;
+            let viewer = new DSB.DCBabylonJsViewer("canvas3d-<?=$this->id;?>", {
+                <?php
+                for($i = 0; $i < count($settings); $i++){
+                    if(count($settings[$i]) && array_search($settings[$i][0], $cameraSettings) !== false){
+                        ?>
+                        <?= $settings[$i][0] ?> : <?= (str_contains($settings[$i][0],'Color'))?'new BABYLON.Color3'.$settings[$i][1]:$settings[$i][1] ?>,
+                        <?php
+                    }
+                }
+                ?>
+
+            },{
+                <?php
+                for($i = 0; $i < count($settings); $i++){
+                    if(count($settings[$i]) && array_search($settings[$i][0], $environmentSettings) !== false){
+                    ?>
+                    <?= $settings[$i][0] ?> : <?= (str_contains($settings[$i][0],'Color'))?'new BABYLON.Color3'.$settings[$i][1]:$settings[$i][1] ?>,
+                    <?php
+                    }
+                }
+                ?>
+            });
+            viewer.backgroundColor = new BABYLON.Color4(0.5,0.5,0.5,0.5);
+
+            <?php
+            $activateMeshSelection = false;
+            $highlightColor = "new BABYLON.Color3(0.3,0.4,0.1)";
+            $backgroundColor = "new BABYLON.Color3(0.3,0.3,0.3)";
+            for($i = 0; $i < count($settings); $i++){
+                if(count($settings[$i]) && array_search($settings[$i][0], $otherSettings) !== false){
+                    if($settings[$i][0] == "backgroundColor"){
+                        $backgroundColor = 'new BABYLON.Color3'.$settings[$i][1];
+                    }else if($settings[$i][0] == "deactivateViewerOnStart" && $settings[$i][1] == "true"){
+                            ?>
+                        userInteractionEnabled = false;
+                        changeInteraction();
+        <?php
+                    }else if($settings[$i][0] == "highlightColor"){
+                        $highlightColor = 'new BABYLON.Color3'.$settings[$i][1];
+                    }else if($settings[$i][0] == "highlightOnClick") {
+                        $activateMeshSelection = true;
+                    }
+                }
+            }
+            ?>
+
+            <?php
+            if($activateMeshSelection){
+                ?>
+                viewer.registerOnMeshSelection(function(parameters){
+                    console.log('parameters: ',parameters);
+                },["BackgroundHelper","BackgroundPlane","BackgroundSkybox","__root__"], <?= $highlightColor ?>);
+             <?php
+            }
+            ?>
+
+            jQuery('.viewer-interaction').on('click',function(e){
+                e.preventDefault();
+                userInteractionEnabled = !userInteractionEnabled;
+                changeInteraction();
+            });
+
+
+
+            viewer.backgroundColor = <?= $backgroundColor; ?>;
+            viewer.loadingStarted = () => {
+                jQuery('.loading-container').show();
+            };
+            viewer.loadingFinished = () =>{
+                viewer.engine.resize();
+                jQuery('.loading-container').hide();
+            }
+            // viewer.loadObject('assets/Lowpoly_tree_sample.obj');
+            <?php
+            $objPath = "";
+            for($i = 0; $i < count($objFile); $i++){
+                if($objFile[$i][1] == 'mtl'){
+                    ?>
+                    viewer.loadMTLFile('<?=$objFile[$i][0]?>');
+                    <?php
+                }else if($objFile[$i][1] == 'jpg' || $objFile[$i][1] == 'png'){
+                    ?>
+                    var materialTexture = new BABYLON.StandardMaterial("grass0", viewer.scene);
+                    materialTexture.diffuseTexture = new BABYLON.Texture("<?=$objFile[$i][0]?>", viewer.scene);
+                    <?php
+                }else{
+                    $objPath = $objFile[$i][0];
+                }
+
+            }
+            if( $objPath){
+
+            ?>
+                viewer.loadObject("<?=$objPath?>").then((meshes)=>{
+                    console.log('#meshIds',meshes);
+                    if(typeof materialTexture !== 'undefined' && materialTexture){
+                        for(var i = 0; i < meshes.length; i++){
+                            meshes[i].material = materialTexture;
+                        }
+                    }
+
+                });
+                <?php
+            }
+            ?>
+        }
+
+
+    </script>
+</div>
+<?php } ?>

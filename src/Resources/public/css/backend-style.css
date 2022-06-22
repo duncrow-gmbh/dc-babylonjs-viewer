@@ -1,0 +1,57 @@
+#pal_dc_babylonjs_viewer_legend .row{
+    display: flex;
+    flex-wrap: wrap;
+    margin-right: -8px;
+    margin-left: -8px;
+}
+#pal_dc_babylonjs_viewer_legend .col-6{
+    position: relative;
+    width: 100%;
+    padding-right: 8px;
+    padding-left: 8px;
+    flex: 0 0 48%;
+    max-width: 48%;
+}
+#pal_dc_babylonjs_viewer_legend h3{
+    padding: 0.5rem 0.5rem;
+    border-bottom: 1px solid gray;
+    margin-bottom: 0.5rem;
+}
+#pal_dc_babylonjs_viewer_legend .inplaceeditor-form{
+    padding: 1rem 1rem;
+}
+
+#pal_dc_babylonjs_viewer_legend .dc-form-settings-container{
+    width:100%;
+    position:relative;
+    display:inline-block;
+}
+#pal_dc_babylonjs_viewer_legend .dc-form-tooltip{
+    display:none;
+    left:50%;
+    transform:translateX(-50%);
+    bottom:100%;
+    background:#dbe1e3;
+    border-radius:5px;
+    max-width:80%;
+    position:absolute;
+    padding:.25rem .5rem;
+    font-size:.8rem;
+}
+#pal_dc_babylonjs_viewer_legend .dc-form-settings-container:hover{
+    background:#dbe1e3;
+}
+
+#pal_dc_babylonjs_viewer_legend .dc-form-settings-container:hover .dc-form-tooltip:not(:empty){
+    display: block;
+}
+#pal_dc_babylonjs_viewer_legend .dc-form-settings-container label{
+    padding: .25rem .5rem;
+}
+#pal_dc_babylonjs_viewer_legend .dc-form-settings-container input{
+    float:right;
+}
+#pal_dc_babylonjs_viewer_legend .dc-form-settings-container input.error{
+    border-color:red;
+    background: rgba(255,0,0,0.4);
+}
