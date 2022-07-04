@@ -5,21 +5,19 @@ use Contao\CoreBundle\DataContainer\PaletteManipulator;
 //$GLOBALS['TL_DCA']['tl_content']['config']['onload_callback'][] = array('CallbackLoading', 'loadFile');
 
 $GLOBALS['TL_DCA']['tl_content']['palettes']['babylonjs_viewer_content_element'] = '
-{type_legend},type;
+{dc_babylonjs_type_legend},headline,type;
 ';
 //{text_legend),text,url,singleSRC, markdownSource, multiSRC;
 
 $GLOBALS['TL_DCA']['tl_content']['fields']['dc_viewer_settings'] = array
 (
-    'label' => 'Viewer Settings',
     'exclude' => true,
     'inputType' => 'text',
     'eval' => array('mandatory'=>false, 'tl_class'=>'hidden'),
-    'sql' => "text NOT NULL default ''"
+    'sql' => "text NULL"
 );
 $GLOBALS['TL_DCA']['tl_content']['fields']['dc_viewer_settings_files'] = array
 (
-    'label' => 'Select Files',
     'exclude'                 => true,
     'inputType'               => 'fileTree',
     'eval'                    => array('multiple'=>true, 'fieldType'=>'checkbox', 'isSortable' => true, 'files'=>true, 'extensions' => 'glb,gltf,stl,obj, jpg,png,mtl'),

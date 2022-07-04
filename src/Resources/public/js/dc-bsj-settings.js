@@ -4,24 +4,24 @@ document.addEventListener("DOMContentLoaded", function(event) {
 
             var settingsCamera=  [
                 //["radius","text", ""],
-                ["minZ","text", "Camera near clip plane, Default: 0.1", 0.1],
-                ["maxZ","text", "Camera far clip plane, Default: 1000", 1000],
-                ["minZoom","text", "minimum Zoom, Default: 0.2", 0.2],
-                ["maxZoom","text", "maximal Zoom, Default: 2", 2],
-                ["upperVerticalAngelLimit","text", "In degrees like 45"],
-                ["lowerVerticalAngelLimit","text", "In degrees like 45"],
-                ["upperHorizontalAngelLimit","text", "In degrees like 45"],
-                ["lowerHorizontalAngelLimit","text", "In degrees like -45"],
-                ["panningSensibility","text", "Default: 1000"],
-                ["wheelPrecision","text", "Default: 3"],
+                ["minZ","number", "Camera near clip plane, Default: 0.1", 0.1],
+                ["maxZ","number", "Camera far clip plane, Default: 1000", 1000],
+                ["minZoom","number", "minimum Zoom, Default: 0.2", 0.2],
+                ["maxZoom","number", "maximal Zoom, Default: 2", 2],
+                ["upperVerticalAngelLimit","number", "In degrees like 45"],
+                ["lowerVerticalAngelLimit","number", "In degrees like 45"],
+                ["upperHorizontalAngelLimit","number", "In degrees like 45"],
+                ["lowerHorizontalAngelLimit","number", "In degrees like -45"],
+                ["panningSensibility","number", "Default: 1000"],
+                ["wheelPrecision","number", "Default: 3"],
                 ["useAutoRotationBehavior","boolean", "Activate object rotation"],
-                ["rotationSpeed","text", "Rotation speed, Default: 0.1"]
+                ["rotationSpeed","number", "Rotation speed, Default: 0.1"]
             ];
             var settingsEnvironment = [
                 ["createGround","boolean"],
-                ["groundSize","text"],
+                ["groundSize","number"],
                 ["createSkybox","boolean"],
-                ["skyboxSize","text"],
+                ["skyboxSize","number"],
                 ["skyboxColor","color", "set Black (0,0,0) to disable it"],
                 ["groundColor","color", "set Black (0,0,0) to disable it"],
                 // ["groundShadowLevel","text"],
@@ -34,6 +34,13 @@ document.addEventListener("DOMContentLoaded", function(event) {
                 ["deactivateViewerOnStart","boolean"],
                 ["highlightOnClick","boolean"],
                 ["highlightColor","color", "set Black (0,0,0) to disable it"],
+                ["focusOnHelperName", "text", "Enter the helpername for the infopoints. e.g. 'dc-helper' -> adds all variation like 001.dc-helper, dc-helper-helper-10, ..."],
+                ["focusImagePath", "text", "URL to the focus image"],
+                ["focusRadius", "number", "Set zoom to infopoint radius, e.g. 5"],
+                ["toggleVisibilityList", "text", "show/hide able elements, comma separated, like 'object-top, object-bottom, object', or leave empty to detect automatically"],
+                ["enableGuiVisibility","boolean"],
+                ["enableGuiAnimations","boolean"],
+                ["enableInteractButton","boolean"],
             ]
 
             var elements = [];
@@ -46,12 +53,19 @@ document.addEventListener("DOMContentLoaded", function(event) {
                 for(let i = 0; i < checkArray.length; i++){
                     var name = checkArray[i][0];
                     var type = checkArray[i][1];
-                    if(type == "text"){
+                    if(type == "number"){
                         if($$('#'+name)[0].value && !isNaN($$('#'+name)[0].value)){
                             $$('#'+name).removeClass('error');
                             data.push([name,$$('#'+name)[0].value])
                         }else if($$('#'+name)[0].value){
                             $$('#'+name).addClass('error');
+                        }
+                    }else if(type == "text"){
+                        if($$('#'+name)[0].value){
+                            $$('#'+name).removeClass('error');
+                            data.push([name,$$('#'+name)[0].value])
+                        }else if(!$$('#'+name)[0].value.length){
+                           // $$('#'+name).addClass('error');
                         }
                     }
                     else if(type == "color"){
@@ -83,7 +97,13 @@ document.addEventListener("DOMContentLoaded", function(event) {
                     var tooltip = new Element('div', {'class' : 'dc-form-tooltip','text':tooltip});
                     var label = new Element('label', {'class' : 'dc-form-settings-container', 'for': name, 'id': name+'-label', 'text': name});
                     var input;
-                    if(type == "text"){
+                    if(type == "number"){
+                        input = new Element('input',{'type': 'text', 'id' : name, 'events': {
+                                'change': function(e){
+                                    writeData();
+                                },
+                            }});
+                    }else if(type == "text"){
                         input = new Element('input',{'type': 'text', 'id' : name, 'events': {
                                 'change': function(e){
                                     writeData();
@@ -162,7 +182,9 @@ document.addEventListener("DOMContentLoaded", function(event) {
                         type = elementIndex[0][1];
                     }
 
-                    if(type == "text"){
+                    if(type == "number"){
+                        $$('#'+setSettingsOnInit[i])[0].value = setSettingsOnInit[i][1];
+                    }else if(type == "text"){
                         $$('#'+setSettingsOnInit[i])[0].value = setSettingsOnInit[i][1];
                     }else if(type=="boolean" && setSettingsOnInit[i][1] == "true"){
                         $$('#'+setSettingsOnInit[i])[0].checked = setSettingsOnInit[i][1];

@@ -1,8 +1,14 @@
 <?php
+if (TL_MODE == 'BE') {?>
+    <div class="cte_type published">DC Babylonjs Viewer Module</div>
+    <?= $this->headline; ?>
+    <?php
+}
 if (TL_MODE != 'BE') {
 
     $GLOBALS['TL_HEAD'][] = '<script src="https://cdn.jsdelivr.net/npm/babylonjs@4.2.0/babylon.js"></script>';
     $GLOBALS['TL_HEAD'][] = '<script src="https://cdn.jsdelivr.net/npm/babylonjs-loaders@4.2.0/babylonjs.loaders.min.js"></script>';
+    $GLOBALS['TL_HEAD'][] = '<script src="https://cdn.jsdelivr.net/npm/babylonjs-gui@4.2.1/babylon.gui.min.js"></script>';
 
     $settings = json_decode(html_entity_decode($this->dc_viewer_settings));
     $files = array_map('\StringUtil::binToUuid', deserialize($this->dc_viewer_settings_files, true));
@@ -13,11 +19,61 @@ if (TL_MODE != 'BE') {
     }
     $cameraSettings = ["radius","minZ","maxZ","minZoom","maxZoom","upperVerticalAngelLimit","lowerVerticalAngelLimit","upperHorizontalAngelLimit","lowerHorizontalAngelLimit","panningSensibility","wheelPrecision","useAutoRotationBehavior","rotationSpeed"];
     $environmentSettings = ["createGround","groundSize","createSkybox","skyboxSize","skyboxColor","groundColor","groundShadowLevel","setupImageProcessing","cameraContrast","cameraExposure"];
-    $otherSettings = ["backgroundColor","deactivateViewerOnStart","highlightOnClick","highlightColor"];
-?>
+    $otherSettings = ["backgroundColor","deactivateViewerOnStart","highlightOnClick","highlightColor", "focusOnHelperName", "focusImagePath", "focusRadius", "toggleVisibilityList", "enableGuiVisibility", "enableGuiAnimations", "enableInteractButton"];
+
+
+    $activateMeshSelection = false;
+    $highlightColor = "new BABYLON.Color3(0.3,0.4,0.1)";
+    $backgroundColor = "new BABYLON.Color3(0.3,0.3,0.3)";
+    $focusOnHelperName = "";
+    $focusImagePath = "./bundles/contaobabylonjsviewer/images/circle.png";
+    $focusRadius = 5;
+    $toggleVisibilityList = "";
+    $enableGuiVisibility = false;
+    $enableGuiAnimations = false;
+    $deactivateViewerOnStart = false;
+    $enableInteractButton = false;
+
+    for ($i = 0; $i < count($settings); $i++) {
+        if (count($settings[$i]) && array_search($settings[$i][0], $otherSettings) !== false) {
+            if ($settings[$i][0] == "backgroundColor") {
+                $backgroundColor = 'new BABYLON.Color3' . $settings[$i][1];
+            } else if ($settings[$i][0] == "deactivateViewerOnStart" && $settings[$i][1] == "true") {
+                $deactivateViewerOnStart = true;
+            } else if ($settings[$i][0] == "highlightColor") {
+                $highlightColor = 'new BABYLON.Color3' . $settings[$i][1];
+            } else if ($settings[$i][0] == "highlightOnClick" && $settings[$i][1] == "true") {
+                $activateMeshSelection = true;
+            } else if ($settings[$i][0] == "focusOnHelperName") {
+                $focusOnHelperName = $settings[$i][1];
+
+            } else if ($settings[$i][0] == "focusImagePath") {
+                $focusImagePath = $settings[$i][1];
+            } else if ($settings[$i][0] == "focusRadius") {
+                $focusRadius = $settings[$i][1];
+            } else if ($settings[$i][0] == "toggleVisibilityList") {
+                $toggleVisibilityList = $settings[$i][1];
+            } else if ($settings[$i][0] == "enableGuiVisibility") {
+                $enableGuiVisibility = filter_var($settings[$i][1], FILTER_VALIDATE_BOOLEAN);
+            } else if ($settings[$i][0] == "enableGuiAnimations") {
+                $enableGuiAnimations = filter_var($settings[$i][1], FILTER_VALIDATE_BOOLEAN) ;
+            } else if ($settings[$i][0] == "enableInteractButton") {
+                $enableInteractButton = filter_var($settings[$i][1], FILTER_VALIDATE_BOOLEAN) ;
+            }
+        }
+    }
+
+    ?>
 <!-- templates/ce_my_content_element.html5 -->
 <style>
-    .viewer-controller {
+    .dc-babylon-js-viewer-container-<?=$this->id;?>{
+        position: relative;
+        margin: 3rem 0;
+    }
+    .dc-babylon-js-viewer-container-<?=$this->id;?> *,.dc-babylon-js-viewer-container-<?=$this->id;?> ::before,.dc-babylon-js-viewer-container-<?=$this->id;?> ::after {
+        box-sizing: border-box;
+    }
+    .dc-babylon-js-viewer-container-<?=$this->id;?> .viewer-controller {
         position: absolute;
         top: 2rem;
         right: 2rem;
@@ -27,10 +83,71 @@ if (TL_MODE != 'BE') {
         -webkit-box-shadow: 0px 0px 8px 0px rgba(0,0,0,0.18);
         box-shadow: 0px 0px 8px 0px rgba(0,0,0,0.18);
     }
-    .disabled{
+    .dc-babylon-js-viewer-container-<?=$this->id;?> .row{
+        display: flex;
+        flex-wrap: wrap;
+        margin-right: -8px;
+        margin-left: -8px;
+    }
+    .dc-babylon-js-viewer-container-<?=$this->id;?> .col-12{
+        position: relative;
+        width: 100%;
+        padding-right: 8px;
+        padding-left: 8px;
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+    .dc-babylon-js-viewer-container-<?=$this->id;?> .col-6{
+        position: relative;
+        width: 50%;
+        padding-right: 8px;
+        padding-left: 8px;
+        flex: 0 0 50%;
+        max-width: 50%;
+    }
+    .dc-babylon-js-viewer-container-<?=$this->id;?> .col-9{
+        position: relative;
+        width: 75%;
+        padding-right: 8px;
+        padding-left: 8px;
+        flex: 0 0 75%;
+        max-width: 75%;
+    }
+    .dc-babylon-js-viewer-container-<?=$this->id;?> .col-3{
+        position: relative;
+        width: 25%;
+        padding-right: 8px;
+        padding-left: 8px;
+        flex: 0 0 25%;
+        max-width: 25%;
+    }
+    @media screen and (min-width: 768px) {
+        .dc-babylon-js-viewer-container-<?=$this->id;?> .col-md-9{
+
+                position: relative;
+                width: 75%;
+                padding-right: 8px;
+                padding-left: 8px;
+                flex: 0 0 75%;
+                max-width: 75%;
+
+        }
+    }
+    @media screen and (min-width: 768px) {
+        .dc-babylon-js-viewer-container-<?=$this->id;?> .col-md-3{
+
+            position: relative;
+            width: 25%;
+            padding-right: 8px;
+            padding-left: 8px;
+            flex: 0 0 25%;
+            max-width: 25%;
+        }
+    }
+    .dc-babylon-js-viewer-container-<?=$this->id;?> .disabled{
         opacity: .875;
     }
-    .loading-container{
+    .dc-babylon-js-viewer-container-<?=$this->id;?> .loading-container-<?=$this->id;?>{
         display:hidden;
         position:absolute;
         left:0;
@@ -40,7 +157,7 @@ if (TL_MODE != 'BE') {
         background:rgba(255,255,255,.5);
         z-index: 9999;
     }
-    .lds-ring {
+    .dc-babylon-js-viewer-container-<?=$this->id;?> .lds-ring {
         display: inline-block;
         position: absolute;
         left:50%;
@@ -49,7 +166,7 @@ if (TL_MODE != 'BE') {
         width: 80px;
         height: 80px;
     }
-    .lds-ring div {
+    .dc-babylon-js-viewer-container-<?=$this->id;?> .lds-ring div {
         box-sizing: border-box;
         display: block;
         position: absolute;
@@ -61,13 +178,13 @@ if (TL_MODE != 'BE') {
         animation: lds-ring 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
         border-color: #fff transparent transparent transparent;
     }
-    .lds-ring div:nth-child(1) {
+    .dc-babylon-js-viewer-container-<?=$this->id;?> .lds-ring div:nth-child(1) {
         animation-delay: -0.45s;
     }
-    .lds-ring div:nth-child(2) {
+    .dc-babylon-js-viewer-container-<?=$this->id;?> .lds-ring div:nth-child(2) {
         animation-delay: -0.3s;
     }
-    .lds-ring div:nth-child(3) {
+    .dc-babylon-js-viewer-container-<?=$this->id;?> .lds-ring div:nth-child(3) {
         animation-delay: -0.15s;
     }
     @keyframes lds-ring {
@@ -78,50 +195,150 @@ if (TL_MODE != 'BE') {
             transform: rotate(360deg);
         }
     }
-    .icondeactivated{
+    .dc-babylon-js-viewer-container-<?=$this->id;?> .icondeactivated{
         display:block;
     }
-    .iconactivated{
+    .dc-babylon-js-viewer-container-<?=$this->id;?> .iconactivated{
         display:none;
     }
-    .viewer-interaction.active .iconactivated{
+    .dc-babylon-js-viewer-container-<?=$this->id;?> .viewer-interaction-<?=$this->id;?>.active .iconactivated{
         display:block;
     }
-    .viewer-interaction.active .icondeactivated {
+    .dc-babylon-js-viewer-container-<?=$this->id;?> .viewer-interaction-<?=$this->id;?>.active .icondeactivated {
         display:none;
+    }
+    .dc-babylon-js-viewer-container-<?=$this->id;?> .hidden{
+        display:none !important;
+    }
+    .dc-babylon-js-viewer-container-<?=$this->id;?> button.play-stop-animation{
+        display:inline-block;
+        margin-right: .3rem;
+        border:none;
+        background:none;
+        width:2rem;
+        height:2rem;
+        text-indent: -9999em;
+        position:relative;
+        background: lightgray;
+        border-radius:50%;
+        cursor: pointer;
+    }
+    .dc-babylon-js-viewer-container-<?=$this->id;?> button.play-stop-animation:before {
+        position:absolute;
+        left:50%;
+        top:50%;
+        transform:translate(-50%,-50%);
+        content:"\23F5";
+        text-indent: 0;
+    }
+    .dc-babylon-js-viewer-container-<?=$this->id;?> button.play-stop-animation.playing:before{
+        content:"\23F9"
+    }
+    .dc-babylon-js-viewer-container-<?=$this->id;?> .canvas3d-container{
+        overflow: hidden;
+        box-shadow: 9px 9px 42px #f0f0f0, -9px -9px 42px #fff;
+        border-radius: 35px;
+        position: relative;
+        padding-top: 60%;
+    }
+    .dc-babylon-js-viewer-container-<?=$this->id;?> #canvas3d-<?=$this->id;?>{
+        width: 100%;
+        height: 100%;
+        touch-action: none;
+        padding: 0;
+        margin: 0;
+        position: absolute;
+        top: 0;
+        left: 0;
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        -khtml-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+        outline: none;
+        -webkit-tap-highlight-color: rgba(255, 255, 255, 0); /* mobile webkit */
+    }
+    .viewer-flap{
+        position:absolute;
+        left:0;
+        top:50%;
+        height: 50%;
+        border-radius: 0 35px 35px 0;
+        transform: translateY(-50%);
+        background: #fff;
+        width: 3rem;
+        z-index: 9;
+        opacity: .5;
     }
 
+
+    #dc-<?=$this->id;?>-showhide-all-container{
+        padding-bottom:.5rem;
+        margin-bottom:.5rem;
+        border-bottom: 1px solid gray;
+    }
+
+    box-shadow: 9px 9px 42px #f0f0f0, -9px -9px 42px #fff;
+    border-radius: 35px;
+
 </style>
-<div class="my-content-element">
+<div class="dc-babylon-js-viewer-container-<?=$this->id;?>">
+    <?php if( $this->headline){ ?>
+        <div class="dc-headline-container">
+            <<?= $this->hl; ?>><?= $this->headline; ?></<?= $this->hl; ?>>
+        </div>
+    <?php } ?>
     <div id="canvas-container">
-        <div class="loading-container">
+        <div class="loading-container-<?=$this->id;?>">
             <div class="lds-ring"><div></div><div></div><div></div><div></div></div>
         </div>
-        <canvas id="canvas3d-<?=$this->id;?>" style="width:100%;height:100%;"></canvas>
+        <?php if($enableInteractButton){ ?>
         <div class="viewer-controller">
-            <a class="viewer-interaction">
+            <a class="viewer-interaction-<?=$this->id;?>">
                 <img class="icondeactivated" src="bundles/contaobabylonjsviewer/images/3D-interact-1.png">
                 <img class="iconactivated" src="bundles/contaobabylonjsviewer/images/3D-interact-2.png">
             </a>
         </div>
+        <?php } ?>
+        <div class="row">
+            <div class="col-12 <?php if($enableGuiVisibility || $enableGuiAnimations){ echo "col-md-9"; }?>">
+                <div class="viewer-flap"></div>
+                <div class="canvas3d-container shadow_style2">
+                    <canvas id="canvas3d-<?=$this->id;?>" style="width:100%;height:100%;"></canvas>
+                </div>
+            </div>
+            <div class="col-12 <?php if($enableGuiVisibility || $enableGuiAnimations){ echo "col-md-3"; }?>">
+                <div class="canvas-gui">
+                    <?php if($enableGuiVisibility){?>
+                        <div class="container-checkbox">
+                            <h3 class="headline">
+                                Show Hide Elements
+                            </h3>
+                            <div id="checkbox-container-<?=$this->id;?>" class="checkbox-container">
+                            </div>
+                        </div>
+                    <?php } ?>
+                    <?php if($enableGuiAnimations){?>
+                        <div class="container-animations">
+                            <h3 class="headline">
+                                Play/Stop Animations
+                            </h3>
+                            <div id="animation-container-<?=$this->id;?>" class="checkbox-container">
+                            </div>
+                        </div>
+                    <?php } ?>
+                </div>
+            </div>
+        </div>
     </div>
     <script type="module">
 
-        import * as DSB from "./bundles/contaobabylonjsviewer/js/duncrow-bjs-viewer.js";
+        import * as DSB from "./bundles/contaobabylonjsviewer/js/duncrow-bjs-viewer.min.js";
 
 
         if(typeof BABYLON !== 'undefined'){
-            function changeInteraction(){
-                if(userInteractionEnabled){
-                    jQuery('#canvas3d-<?=$this->id;?>').removeClass('disabled');
-                    jQuery('.viewer-interaction').removeClass('active');
 
-                }else{
-                    jQuery('#canvas3d-<?=$this->id;?>').addClass('disabled');
-                    jQuery('.viewer-interaction').addClass('active');
-                }
-                viewer.userInteractionEnabled = userInteractionEnabled;
-            }
 
             let userInteractionEnabled = true;
             let viewer = new DSB.DCBabylonJsViewer("canvas3d-<?=$this->id;?>", {
@@ -146,57 +363,121 @@ if (TL_MODE != 'BE') {
                 }
                 ?>
             });
-            viewer.backgroundColor = new BABYLON.Color4(0.5,0.5,0.5,0.5);
 
-            <?php
-            $activateMeshSelection = false;
-            $highlightColor = "new BABYLON.Color3(0.3,0.4,0.1)";
-            $backgroundColor = "new BABYLON.Color3(0.3,0.3,0.3)";
-            for($i = 0; $i < count($settings); $i++){
-                if(count($settings[$i]) && array_search($settings[$i][0], $otherSettings) !== false){
-                    if($settings[$i][0] == "backgroundColor"){
-                        $backgroundColor = 'new BABYLON.Color3'.$settings[$i][1];
-                    }else if($settings[$i][0] == "deactivateViewerOnStart" && $settings[$i][1] == "true"){
-                            ?>
-                        userInteractionEnabled = false;
-                        changeInteraction();
-        <?php
-                    }else if($settings[$i][0] == "highlightColor"){
-                        $highlightColor = 'new BABYLON.Color3'.$settings[$i][1];
-                    }else if($settings[$i][0] == "highlightOnClick") {
-                        $activateMeshSelection = true;
-                    }
-                }
-            }
-            ?>
 
+            <?php if($deactivateViewerOnStart){ ?>
+            userInteractionEnabled = false;
+            changeInteraction();
+            <?php } ?>
+            <?php if( $focusOnHelperName){ ?>
+            var blackListString = "<?= $focusOnHelperName ?>";
+            var blackListArray = blackListString.split(',');
+            viewer.blacklist = [...new Set([...blackListArray,...["__root__"]])];
+            <?php } ?>
+            <?php if( $toggleVisibilityList){ ?>
+            var whiteListString = "<?= $toggleVisibilityList ?>";
+            var whiteListArray = whiteListString.split(',');
+            viewer.whitelist = [...new Set([...whiteListArray,...["__root__"]])];
+            <?php } ?>
             <?php
             if($activateMeshSelection){
                 ?>
                 viewer.registerOnMeshSelection(function(parameters){
-                    console.log('parameters: ',parameters);
-                },["BackgroundHelper","BackgroundPlane","BackgroundSkybox","__root__"], <?= $highlightColor ?>);
+
+                    var camera = viewer.camera;
+                    if(parameters && typeof parameters.meshName !== 'undefined' && parameters.meshName.includes('Sphere')){
+
+                    }else{
+                        camera.zoomOnMeshes();
+                    }
+                }, <?= $highlightColor ?>);
              <?php
             }
             ?>
 
-            jQuery('.viewer-interaction').on('click',function(e){
-                e.preventDefault();
+            var animationTest = document.querySelectorAll('.playstop');
+            animationTest.forEach(elem => {
+                elem.addEventListener('click', (event) => {
+                    if(typeof event.target.attributes["data-id"] !== 'undefined' &&
+                        typeof event.target.attributes["data-id"]["value"] !== 'undefined'){
+                        playStop(event.target.attributes["data-id"]["value"])    ;
+                    }
+                });
+            });
+
+            <?php if($enableInteractButton){ ?>
+            var clickMe = document.querySelector('.viewer-interaction-<?=$this->id;?>');
+            clickMe.addEventListener('click', function (event) {
+                event.preventDefault();
                 userInteractionEnabled = !userInteractionEnabled;
                 changeInteraction();
             });
+            <?php } ?>
 
+            // Show an element
+            var setClass = function (elem, className) {
+                elem[0].classList.add(className);
+            };
+            var unsetClass = function (elem, className) {
+                elem[0].classList.remove(className);
+            };
+            var toggle = function (elem, className) {
+                elem[0].classList.toggle(className);
+            };
 
 
             viewer.backgroundColor = <?= $backgroundColor; ?>;
             viewer.loadingStarted = () => {
-                jQuery('.loading-container').show();
+                var loadingContainer = document.getElementsByClassName('loading-container-<?=$this->id;?>');
+                unsetClass(loadingContainer, 'hidden');
+
             };
             viewer.loadingFinished = () =>{
                 viewer.engine.resize();
-                jQuery('.loading-container').hide();
+                var loadingContainer = document.getElementsByClassName('loading-container-<?=$this->id;?>');
+                setClass(loadingContainer, 'hidden');
+                <?php
+                if($focusOnHelperName){ ?>
+                var infopoints = new DSB.DCInfopoints(viewer, "<?= $focusOnHelperName ?>", "<?= $focusImagePath ?>", <?= $focusRadius ?>);
+                <?php } ?>
+                <?php if($enableGuiVisibility){?>
+                var gui = new DSB.DCGui(viewer, "checkbox-container-<?=$this->id;?>",<?=$this->id;?>,  DSB.DCGuiModel.ShowHideElements );
+                <?php } ?>
+                <?php if($enableGuiAnimations){?>
+                var gui = new DSB.DCGui(viewer, "animation-container-<?=$this->id;?>",<?=$this->id;?>,  DSB.DCGuiModel.AnimationElements );
+                <?php } ?>
             }
-            // viewer.loadObject('assets/Lowpoly_tree_sample.obj');
+            function playStop(number){
+                viewer.scene.animationGroups.forEach((animationGroup,index) => {
+                    if(index != number){
+                        animationGroup.stop();
+                    }
+                })
+
+                var group = viewer.scene.animationGroups[number];
+                if (!group.isStarted) {
+                    group.play(!(number == 2));
+                }else {
+                    group.stop();
+                }
+            }
+            <?php if($enableInteractButton){ ?>
+            function changeInteraction(){
+                if(userInteractionEnabled){
+                    var canvas = document.getElementById('canvas3d-<?=$this->id;?>');
+                    unsetClass(canvas, 'disabled');
+                    var interaction = document.getElementsByClassName('viewer-interaction-<?=$this->id;?>');
+                    unsetClass(interaction, 'active');
+
+                }else{
+                    var canvas = document.getElementById('canvas3d-<?=$this->id;?>');
+                    setClass(canvas, 'disabled');
+                    var interaction = document.getElementsByClassName('viewer-interaction-<?=$this->id;?>');
+                    setClass(interaction, 'active');
+                }
+                viewer.userInteractionEnabled = userInteractionEnabled;
+            }
+            <?php } ?>
             <?php
             $objPath = "";
             for($i = 0; $i < count($objFile); $i++){
@@ -218,10 +499,10 @@ if (TL_MODE != 'BE') {
 
             ?>
                 viewer.loadObject("<?=$objPath?>").then((meshes)=>{
-                    console.log('#meshIds',meshes);
                     if(typeof materialTexture !== 'undefined' && materialTexture){
                         for(var i = 0; i < meshes.length; i++){
                             meshes[i].material = materialTexture;
+                            meshes[i].isVisible = false;
                         }
                     }
 
@@ -235,3 +516,4 @@ if (TL_MODE != 'BE') {
     </script>
 </div>
 <?php } ?>
+
