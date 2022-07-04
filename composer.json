@@ -1,5 +1,5 @@
 {
-    "name": "duncrow-gmbh/contao-babylonjs-viewer-bundle",
+    "name": "duncrow-gmbh/dc-babylonjs-viewer",
     "description": "A Babylonjs Viewer Bundle",
     "license": "LGPL-3.0-or-later",
     "type": "contao-bundle",
@@ -12,8 +12,8 @@
     ],
     "homepage": "https://duncrow.com/",
     "support": {
-        "issues": "https://github.com/duncrow-gmbh/contao-babylonjs-viewer-bundle/issues",
-        "source": "https://github.com/duncrow-gmbh/contao-babylonjs-viewer-bundle"
+        "issues": "https://github.com/duncrow-gmbh/dc-babylonjs-viewer/issues",
+        "source": "https://github.com/duncrow-gmbh/dc-babylonjs-viewer"
     },
     "require": {
         "php": "^7.4 || ^8.0",
