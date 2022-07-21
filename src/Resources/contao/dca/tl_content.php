@@ -5,7 +5,7 @@ use Contao\CoreBundle\DataContainer\PaletteManipulator;
 //$GLOBALS['TL_DCA']['tl_content']['config']['onload_callback'][] = array('CallbackLoading', 'loadFile');
 
 $GLOBALS['TL_DCA']['tl_content']['palettes']['babylonjs_viewer_content_element'] = '
-{dc_babylonjs_type_legend},headline,type;
+{dc_babylonjs_type_legend},headline,type,code;
 ';
 //{text_legend),text,url,singleSRC, markdownSource, multiSRC;
 

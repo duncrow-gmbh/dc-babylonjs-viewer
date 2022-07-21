@@ -6,9 +6,11 @@ if (TL_MODE == 'BE') {?>
 }
 if (TL_MODE != 'BE') {
 
-    $GLOBALS['TL_HEAD'][] = '<script src="https://cdn.jsdelivr.net/npm/babylonjs@4.2.0/babylon.js"></script>';
-    $GLOBALS['TL_HEAD'][] = '<script src="https://cdn.jsdelivr.net/npm/babylonjs-loaders@4.2.0/babylonjs.loaders.min.js"></script>';
-    $GLOBALS['TL_HEAD'][] = '<script src="https://cdn.jsdelivr.net/npm/babylonjs-gui@4.2.1/babylon.gui.min.js"></script>';
+    $GLOBALS['TL_HEAD'][] = '<script src="https://cdn.jsdelivr.net/npm/babylonjs@5.14.0/babylon.js"></script>';
+    $GLOBALS['TL_HEAD'][] = '<script src="https://cdn.jsdelivr.net/npm/babylonjs-loaders@5.14.0/babylonjs.loaders.min.js"></script>';
+    $GLOBALS['TL_HEAD'][] = '<script src="https://cdn.jsdelivr.net/npm/babylonjs-gui@5.14.0/babylon.gui.min.js"></script>';
+    $GLOBALS['TL_HEAD'][] = '<link rel="stylesheet" href="https://unpkg.com/swiper@8/swiper-bundle.min.css" />';
+    $GLOBALS['TL_HEAD'][] = '<script src="https://unpkg.com/swiper@8/swiper-bundle.min.js"></script>';
 
     $settings = json_decode(html_entity_decode($this->dc_viewer_settings));
     $files = array_map('\StringUtil::binToUuid', deserialize($this->dc_viewer_settings_files, true));
@@ -18,33 +20,35 @@ if (TL_MODE != 'BE') {
         $objFile[] = [(\FilesModel::findByUuid($files[$i]))->path, (\FilesModel::findByUuid($files[$i]))->extension];
     }
     $cameraSettings = ["radius","minZ","maxZ","minZoom","maxZoom","upperVerticalAngelLimit","lowerVerticalAngelLimit","upperHorizontalAngelLimit","lowerHorizontalAngelLimit","panningSensibility","wheelPrecision","useAutoRotationBehavior","rotationSpeed"];
-    $environmentSettings = ["createGround","groundSize","createSkybox","skyboxSize","skyboxColor","groundColor","groundShadowLevel","setupImageProcessing","cameraContrast","cameraExposure"];
-    $otherSettings = ["backgroundColor","deactivateViewerOnStart","highlightOnClick","highlightColor", "focusOnHelperName", "focusImagePath", "focusRadius", "toggleVisibilityList", "enableGuiVisibility", "enableGuiAnimations", "enableInteractButton"];
+    $environmentSettings = ["backgroundColor","createGround","groundSize","createSkybox","skyboxSize","skyboxColor","groundColor","groundShadowLevel","setupImageProcessing","cameraContrast","cameraExposure"];
+    $otherSettings = ["deactivateViewerOnStart","highlightOnClick","highlightColor", "focusOnHelperName", "focusImagePath", "focusRadius", "toggleVisibilityList","blackList", "enableGuiVisibility", "enableGuiAnimations", "enableInteractButton", "enableGuiSelect"];
 
-
+    $zoomSelectedMesh = false;
     $activateMeshSelection = false;
     $highlightColor = "new BABYLON.Color3(0.3,0.4,0.1)";
     $backgroundColor = "new BABYLON.Color3(0.3,0.3,0.3)";
     $focusOnHelperName = "";
-    $focusImagePath = "./bundles/contaobabylonjsviewer/images/circle.png";
+    $focusImagePath = "";
     $focusRadius = 5;
     $toggleVisibilityList = "";
+    $blackList = "";
     $enableGuiVisibility = false;
     $enableGuiAnimations = false;
+    $enableGuiSelect = false;
     $deactivateViewerOnStart = false;
     $enableInteractButton = false;
 
     for ($i = 0; $i < count($settings); $i++) {
         if (count($settings[$i]) && array_search($settings[$i][0], $otherSettings) !== false) {
-            if ($settings[$i][0] == "backgroundColor") {
-                $backgroundColor = 'new BABYLON.Color3' . $settings[$i][1];
-            } else if ($settings[$i][0] == "deactivateViewerOnStart" && $settings[$i][1] == "true") {
+            if ($settings[$i][0] == "deactivateViewerOnStart" && $settings[$i][1] == "true") {
                 $deactivateViewerOnStart = true;
             } else if ($settings[$i][0] == "highlightColor") {
                 $highlightColor = 'new BABYLON.Color3' . $settings[$i][1];
             } else if ($settings[$i][0] == "highlightOnClick" && $settings[$i][1] == "true") {
                 $activateMeshSelection = true;
-            } else if ($settings[$i][0] == "focusOnHelperName") {
+            } else if ($settings[$i][0] == " zoomSelectedMesh" && $settings[$i][1] == "true") {
+                $zoomSelectedMesh = true;
+            }else if ($settings[$i][0] == "focusOnHelperName") {
                 $focusOnHelperName = $settings[$i][1];
 
             } else if ($settings[$i][0] == "focusImagePath") {
@@ -57,23 +61,45 @@ if (TL_MODE != 'BE') {
                 $enableGuiVisibility = filter_var($settings[$i][1], FILTER_VALIDATE_BOOLEAN);
             } else if ($settings[$i][0] == "enableGuiAnimations") {
                 $enableGuiAnimations = filter_var($settings[$i][1], FILTER_VALIDATE_BOOLEAN) ;
+            } else if ($settings[$i][0] == "enableGuiSelect") {
+                $enableGuiSelect = filter_var($settings[$i][1], FILTER_VALIDATE_BOOLEAN) ;
             } else if ($settings[$i][0] == "enableInteractButton") {
                 $enableInteractButton = filter_var($settings[$i][1], FILTER_VALIDATE_BOOLEAN) ;
             }
+            else if ($settings[$i][0] == "blackList") {
+                $blackList = $settings[$i][1];
+            }
+
         }
     }
+
+    $mainContainer = "#dc-babylon-js-viewer-container-".$this->id;
 
     ?>
 <!-- templates/ce_my_content_element.html5 -->
 <style>
-    .dc-babylon-js-viewer-container-<?=$this->id;?>{
+    <?=$mainContainer;?>{
+        background:white;
+    }
+    <?=$mainContainer;?> .dc-fps-viewer {
+        background: rgba(255,255,255,.5);
+        padding: 0.5rem;
+        font-size: 12px;
+        border-radius: 6px;
+        left: 50%;
+        right: auto !important;
+        transform: translateX(-50%);
+        top: 1rem !important;
+        pointer-events: none;
+    }
+    <?=$mainContainer;?>{
         position: relative;
         margin: 3rem 0;
     }
-    .dc-babylon-js-viewer-container-<?=$this->id;?> *,.dc-babylon-js-viewer-container-<?=$this->id;?> ::before,.dc-babylon-js-viewer-container-<?=$this->id;?> ::after {
+    <?=$mainContainer;?> *,<?=$mainContainer;?> ::before,<?=$mainContainer;?> ::after {
         box-sizing: border-box;
     }
-    .dc-babylon-js-viewer-container-<?=$this->id;?> .viewer-controller {
+    <?=$mainContainer;?> .dc-viewer-controller {
         position: absolute;
         top: 2rem;
         right: 2rem;
@@ -83,13 +109,13 @@ if (TL_MODE != 'BE') {
         -webkit-box-shadow: 0px 0px 8px 0px rgba(0,0,0,0.18);
         box-shadow: 0px 0px 8px 0px rgba(0,0,0,0.18);
     }
-    .dc-babylon-js-viewer-container-<?=$this->id;?> .row{
+    <?=$mainContainer;?> .row{
         display: flex;
         flex-wrap: wrap;
         margin-right: -8px;
         margin-left: -8px;
     }
-    .dc-babylon-js-viewer-container-<?=$this->id;?> .col-12{
+    <?=$mainContainer;?> .col-12{
         position: relative;
         width: 100%;
         padding-right: 8px;
@@ -97,7 +123,7 @@ if (TL_MODE != 'BE') {
         flex: 0 0 100%;
         max-width: 100%;
     }
-    .dc-babylon-js-viewer-container-<?=$this->id;?> .col-6{
+    <?=$mainContainer;?> .col-6{
         position: relative;
         width: 50%;
         padding-right: 8px;
@@ -105,7 +131,7 @@ if (TL_MODE != 'BE') {
         flex: 0 0 50%;
         max-width: 50%;
     }
-    .dc-babylon-js-viewer-container-<?=$this->id;?> .col-9{
+    <?=$mainContainer;?> .col-9{
         position: relative;
         width: 75%;
         padding-right: 8px;
@@ -113,7 +139,7 @@ if (TL_MODE != 'BE') {
         flex: 0 0 75%;
         max-width: 75%;
     }
-    .dc-babylon-js-viewer-container-<?=$this->id;?> .col-3{
+    <?=$mainContainer;?> .col-3{
         position: relative;
         width: 25%;
         padding-right: 8px;
@@ -122,7 +148,7 @@ if (TL_MODE != 'BE') {
         max-width: 25%;
     }
     @media screen and (min-width: 768px) {
-        .dc-babylon-js-viewer-container-<?=$this->id;?> .col-md-9{
+        <?=$mainContainer;?> .col-md-9{
 
                 position: relative;
                 width: 75%;
@@ -134,7 +160,7 @@ if (TL_MODE != 'BE') {
         }
     }
     @media screen and (min-width: 768px) {
-        .dc-babylon-js-viewer-container-<?=$this->id;?> .col-md-3{
+        <?=$mainContainer;?> .col-md-3{
 
             position: relative;
             width: 25%;
@@ -144,10 +170,10 @@ if (TL_MODE != 'BE') {
             max-width: 25%;
         }
     }
-    .dc-babylon-js-viewer-container-<?=$this->id;?> .disabled{
+    <?=$mainContainer;?> .disabled{
         opacity: .875;
     }
-    .dc-babylon-js-viewer-container-<?=$this->id;?> .loading-container-<?=$this->id;?>{
+    <?=$mainContainer;?> .dc-loading-container>{
         display:hidden;
         position:absolute;
         left:0;
@@ -157,7 +183,7 @@ if (TL_MODE != 'BE') {
         background:rgba(255,255,255,.5);
         z-index: 9999;
     }
-    .dc-babylon-js-viewer-container-<?=$this->id;?> .lds-ring {
+    <?=$mainContainer;?> .lds-ring {
         display: inline-block;
         position: absolute;
         left:50%;
@@ -166,7 +192,7 @@ if (TL_MODE != 'BE') {
         width: 80px;
         height: 80px;
     }
-    .dc-babylon-js-viewer-container-<?=$this->id;?> .lds-ring div {
+    <?=$mainContainer;?> .lds-ring div {
         box-sizing: border-box;
         display: block;
         position: absolute;
@@ -178,13 +204,13 @@ if (TL_MODE != 'BE') {
         animation: lds-ring 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
         border-color: #fff transparent transparent transparent;
     }
-    .dc-babylon-js-viewer-container-<?=$this->id;?> .lds-ring div:nth-child(1) {
+    <?=$mainContainer;?> .lds-ring div:nth-child(1) {
         animation-delay: -0.45s;
     }
-    .dc-babylon-js-viewer-container-<?=$this->id;?> .lds-ring div:nth-child(2) {
+    <?=$mainContainer;?> .lds-ring div:nth-child(2) {
         animation-delay: -0.3s;
     }
-    .dc-babylon-js-viewer-container-<?=$this->id;?> .lds-ring div:nth-child(3) {
+    <?=$mainContainer;?> .lds-ring div:nth-child(3) {
         animation-delay: -0.15s;
     }
     @keyframes lds-ring {
@@ -195,22 +221,20 @@ if (TL_MODE != 'BE') {
             transform: rotate(360deg);
         }
     }
-    .dc-babylon-js-viewer-container-<?=$this->id;?> .icondeactivated{
+    <?=$mainContainer;?> .dc-icondeactivated{
         display:block;
     }
-    .dc-babylon-js-viewer-container-<?=$this->id;?> .iconactivated{
+    <?=$mainContainer;?> .dc-iconactivated{
         display:none;
     }
-    .dc-babylon-js-viewer-container-<?=$this->id;?> .viewer-interaction-<?=$this->id;?>.active .iconactivated{
+    <?=$mainContainer;?> .dc-viewer-interaction.active .dc-iconactivated{
         display:block;
     }
-    .dc-babylon-js-viewer-container-<?=$this->id;?> .viewer-interaction-<?=$this->id;?>.active .icondeactivated {
+    <?=$mainContainer;?> .dc-viewer-interaction.active .dc-icondeactivated {
         display:none;
     }
-    .dc-babylon-js-viewer-container-<?=$this->id;?> .hidden{
-        display:none !important;
-    }
-    .dc-babylon-js-viewer-container-<?=$this->id;?> button.play-stop-animation{
+
+    <?=$mainContainer;?> button.play-stop-animation{
         display:inline-block;
         margin-right: .3rem;
         border:none;
@@ -223,7 +247,7 @@ if (TL_MODE != 'BE') {
         border-radius:50%;
         cursor: pointer;
     }
-    .dc-babylon-js-viewer-container-<?=$this->id;?> button.play-stop-animation:before {
+    <?=$mainContainer;?> button.play-stop-animation:before {
         position:absolute;
         left:50%;
         top:50%;
@@ -231,17 +255,25 @@ if (TL_MODE != 'BE') {
         content:"\23F5";
         text-indent: 0;
     }
-    .dc-babylon-js-viewer-container-<?=$this->id;?> button.play-stop-animation.playing:before{
+    <?=$mainContainer;?> button.play-stop-animation.playing:before{
         content:"\23F9"
     }
-    .dc-babylon-js-viewer-container-<?=$this->id;?> .canvas3d-container{
-        overflow: hidden;
-        box-shadow: 9px 9px 42px #f0f0f0, -9px -9px 42px #fff;
-        border-radius: 35px;
-        position: relative;
+    <?=$mainContainer;?> .dc-canvas3d-container{
+        /*overflow: hidden;*/
+        /*box-shadow: 9px 9px 42px #f0f0f0, -9px -9px 42px #fff;*/
+        /*position: relative;*/
+        width:100%;
         padding-top: 60%;
     }
-    .dc-babylon-js-viewer-container-<?=$this->id;?> #canvas3d-<?=$this->id;?>{
+    <?=$mainContainer;?> .dc-modal-image-container .dc-canvas3d-container{
+        position:absolute;
+        height:100%;
+        padding:0;
+        width:100%;
+        left:0;
+        top:0;
+    }
+    <?=$mainContainer;?> .dc-canvas-3d{
         width: 100%;
         height: 100%;
         touch-action: none;
@@ -259,7 +291,7 @@ if (TL_MODE != 'BE') {
         outline: none;
         -webkit-tap-highlight-color: rgba(255, 255, 255, 0); /* mobile webkit */
     }
-    .viewer-flap{
+    <?=$mainContainer;?> .dc-viewer-flap{
         position:absolute;
         left:0;
         top:50%;
@@ -270,250 +302,979 @@ if (TL_MODE != 'BE') {
         width: 3rem;
         z-index: 9;
         opacity: .5;
+        display: none;
     }
 
 
-    #dc-<?=$this->id;?>-showhide-all-container{
+/*
+    <?=$mainContainer;?> #dc-showhide-all-container{
         padding-bottom:.5rem;
         margin-bottom:.5rem;
         border-bottom: 1px solid gray;
     }
+    */
 
-    box-shadow: 9px 9px 42px #f0f0f0, -9px -9px 42px #fff;
-    border-radius: 35px;
+    <?=$mainContainer;?> .dc-modal{
+        position:absolute;
+        z-index: 99;
+        width:100%;
+        height: 100%;
+        background:rgba(0,0,0,0.2);
+        left:0;
+        top:0;
+        display:none;
+    }
+    <?=$mainContainer;?> .dc-modal-content-container{
+        position:fixed;
+        left:50%;
+        top:50%;
+        transform:translate(-50%,-50%);
+        width:100%;
+        height:100%;
+        z-index: 99999;
+    }
+    <?=$mainContainer;?> .dc-modal-content-container:not(.fullscreen){
+        position:absolute;
+        max-width: 1000px;
+        max-height: 700px;
+    }
+    <?=$mainContainer;?> .dc-modal-content-container .inner{
+        background:white;
+        height: 100%;
+        padding: 1rem;
+    }
+    <?=$mainContainer;?> .dc-btn-close{
+        position:absolute;
+        right:2rem;
+        top:2rem;
+        -webkit-box-shadow: 1px 1px 4px 0px rgba(0,0,0,0.19);
+        box-shadow: 1px 1px 4px 0px rgba(0,0,0,0.19);
+        width: 2rem;
+        height:2rem;
+        text-align:center;
+        font-weight:bold;
+        background:white;
+        color:black;
+        border-radius:50%;
+        line-height: 2rem;
+        cursor:pointer;
+        z-index: 9;
+    }
+    <?=$mainContainer;?> .dc-modal .dc-image-container{
+        -webkit-box-shadow: 1px 1px 4px 0px rgba(0,0,0,0.19);
+        box-shadow: 1px 1px 4px 0px rgba(0,0,0,0.19);
+        position:relative;
+        width:100%;
+        height:0;
+        padding-top: 56%;
+        overflow:hidden;
+        position:relative;
+    }
+    <?=$mainContainer;?> .dc-modal .dc-image-container img{
+        position:absolute;
+        left:50%;
+        top:50%;
+        transform:translate(-50%,-50%);
+        width:100%;
+        height:100%;
+    }
+    <?=$mainContainer;?> .dc-download{
+        text-decoration: none;
+        color:black;
+        border:1px solid black;
+        border-radius: 5px;
+        background:white;
+        padding: .25rem .5rem;
+        margin: .25rem;
+         position: absolute;
+         left: 50%;
+         transform: translateX(-50%);
+         bottom: 1.875rem;
+    }
+    <?=$mainContainer;?> .dc-download:focus, <?=$mainContainer;?> .dc-download:hover, <?=$mainContainer;?> .dc-download:active{
+        opacity: .75;
+    }
+
+    <?=$mainContainer;?> .dc-babylonjs-controller{
+        display:block;
+        width:2rem;
+        height:2rem;
+        background:white;
+        -webkit-box-shadow: 1px 1px 4px 0px rgba(0,0,0,0.19);
+        box-shadow: 1px 1px 4px 0px rgba(0,0,0,0.19);
+        border-radius:5px;
+        position:relative;
+        text-indent: -999em;
+        margin:.25rem;
+        cursor:pointer;
+    }
+    <?=$mainContainer;?> .dc-babylonjs-controller:before{
+        content:"";
+        display:block;
+        position:absolute;
+        left:50%;
+        top:50%;
+        transform:translate(-50%,-50%);
+        font-size:1rem;
+        text-indent: 0;
+        width:1rem;
+        display:inline-block;
+        margin-top:2px;
+    }
+    <?=$mainContainer;?> .dc-ctrl-fullscreen:before{
+        content: url("data:image/svg+xml,%3C%3Fxml version='1.0' encoding='UTF-8'%3F%3E%3Csvg id='a' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 62.44 62.44'%3E%3Cpath d='M57.98,7.66l-23.56,23.56,23.56,23.56v-12.41c.09-1.39,.84-2.14,2.23-2.23,1.39,.09,2.14,.84,2.23,2.23v17.84c-.09,1.39-.84,2.14-2.23,2.23h-17.84c-1.39-.09-2.14-.84-2.23-2.23,.09-1.39,.84-2.14,2.23-2.23h12.41l-23.56-23.56L7.66,57.98h12.41c1.39,.09,2.14,.84,2.23,2.23-.09,1.39-.84,2.14-2.23,2.23H2.23c-1.39-.09-2.14-.84-2.23-2.23v-17.84c.09-1.39,.84-2.14,2.23-2.23,1.39,.09,2.14,.84,2.23,2.23v12.41L28.02,31.22,4.46,7.66v12.41c-.09,1.39-.84,2.14-2.23,2.23-1.39-.09-2.14-.84-2.23-2.23V2.23C.09,.84,.84,.09,2.23,0H20.07c1.39,.09,2.14,.84,2.23,2.23-.09,1.39-.84,2.14-2.23,2.23H7.66L31.22,28.02,54.78,4.46h-12.41c-1.39-.09-2.14-.84-2.23-2.23,.09-1.39,.84-2.14,2.23-2.23h17.84c1.39,.09,2.14,.84,2.23,2.23V20.07c-.09,1.39-.84,2.14-2.23,2.23-1.39-.09-2.14-.84-2.23-2.23V7.66Z'/%3E%3C/svg%3E");
+    }
+    <?=$mainContainer;?> .dc-ctrl-reset:before{
+        content: url("data:image/svg+xml,%3C%3Fxml version='1.0' encoding='UTF-8'%3F%3E%3Csvg id='a' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 62.43 62.46'%3E%3Cpath d='M31.21,.02c5.85,.09,11.1,1.53,15.75,4.32,4.74,2.79,8.46,6.51,11.15,11.15,2.79,4.74,4.23,9.99,4.32,15.75-.09,5.76-1.53,11.01-4.32,15.75-2.7,4.65-6.41,8.36-11.15,11.15-4.65,2.79-9.9,4.23-15.75,4.32-4.83,0-9.39-1.07-13.66-3.21-4.28-2.04-7.95-4.97-11.01-8.78-.74-1.21-.61-2.28,.42-3.21,1.12-.74,2.18-.6,3.21,.42,2.6,3.35,5.72,5.9,9.34,7.67,3.62,1.77,7.53,2.65,11.71,2.65,7.53-.19,13.85-2.79,18.96-7.81,5.02-5.11,7.62-11.43,7.81-18.96-.19-7.53-2.79-13.85-7.81-18.96-5.11-5.02-11.43-7.62-18.96-7.81-6.41,.09-12.13,2.14-17.15,6.13,0,.09-.05,.14-.14,.14l7.67,7.81c.65,.65,.84,1.44,.56,2.37-.47,.93-1.16,1.39-2.09,1.39H2.23c-1.39-.09-2.14-.84-2.23-2.23V2.23C0,1.3,.46,.61,1.39,.14c.93-.28,1.72-.09,2.37,.56l7.11,6.97c.09-.19,.23-.32,.42-.42C17.05,2.51,23.7,.1,31.22,0V.02ZM4.45,17.86H14.63L4.45,7.68v10.18Z'/%3E%3C/svg%3E");
+    }
+    <?=$mainContainer;?> .dc-ctrl-screenshot:before{
+        content: url("data:image/svg+xml,%3C%3Fxml version='1.0' encoding='UTF-8'%3F%3E%3Csvg id='a' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 71.37 62.44'%3E%3Cpath d='M52,8.92h10.45c2.51,.09,4.6,.98,6.27,2.65s2.55,3.76,2.65,6.27V53.52c-.09,2.51-.98,4.6-2.65,6.27s-3.76,2.55-6.27,2.65H8.92c-2.51-.09-4.6-.98-6.27-2.65S.09,56.03,0,53.52V17.84c.09-2.51,.98-4.6,2.65-6.27s3.76-2.55,6.27-2.65h10.45l1.39-4.32C21.88,1.72,24.01,.19,27.17,0h17.01c3.16,.19,5.3,1.72,6.41,4.6l1.39,4.32h.02ZM5.72,14.64c-.84,.84-1.25,1.91-1.25,3.21V53.53c0,1.3,.42,2.37,1.25,3.21s1.9,1.25,3.21,1.25H62.46c1.3,0,2.37-.42,3.21-1.25s1.25-1.9,1.25-3.21V17.85c0-1.3-.42-2.37-1.25-3.21s-1.91-1.25-3.21-1.25h-13.66l-2.37-7.39c-.37-.93-1.12-1.44-2.23-1.53H27.19c-1.12,.09-1.86,.61-2.23,1.53l-2.37,7.39H8.93c-1.3,0-2.37,.42-3.21,1.25Zm18.96,10.04c2.88-2.97,6.55-4.51,11.01-4.6,4.46,.09,8.13,1.63,11.01,4.6,2.97,2.88,4.51,6.55,4.6,11.01-.09,4.46-1.63,8.13-4.6,11.01-2.88,2.98-6.55,4.51-11.01,4.6-4.46-.09-8.13-1.62-11.01-4.6-2.98-2.88-4.51-6.55-4.6-11.01,.09-4.46,1.62-8.13,4.6-11.01Zm3.07,3.07c-2.05,2.14-3.11,4.79-3.21,7.95,.09,3.16,1.16,5.81,3.21,7.95,2.14,2.05,4.79,3.11,7.95,3.21,3.16-.09,5.81-1.16,7.95-3.21,2.04-2.14,3.11-4.79,3.21-7.95-.09-3.16-1.16-5.81-3.21-7.95-2.14-2.04-4.79-3.11-7.95-3.21-3.16,.09-5.81,1.16-7.95,3.21Z'/%3E%3C/svg%3E");
+    }
+
+    <?=$mainContainer;?> .dc-babylonjs-controller-container{
+        position:absolute;
+        left:1rem;
+        top:1rem;
+    }
+    <?=$mainContainer;?> .controller-container-right{
+        left:auto;
+        right:1rem;
+    }
+    <?=$mainContainer;?> .swiper {
+        width: 100%;
+        height: 250px;
+    }
+    <?=$mainContainer;?> .swiper-slide{
+        background:none;
+        cursor: default;
+    }
+
+
+    <?=$mainContainer;?> .swiper-slide-active{
+        /*background:#E8E8E8;*/
+        cursor: pointer;
+    }
+    <?=$mainContainer;?> .dc-scroll-container{
+        position:absolute;
+        top:50%;
+        transform: translateY(-50%);
+        left:0;
+        width: 100%;
+        height: 250px;
+        z-index: 9;
+        border-radius: 11px;
+        overflow: hidden;
+        background:white;
+    }
+    <?=$mainContainer;?> .dc-scroll-containerlabel {
+        margin-bottom: 0.5rem;
+        display: block;
+    }
+    <?=$mainContainer;?> .dc-scroll-container:before{
+        content:'';
+        pointer-events: none;
+        background: rgb(255,255,255);
+        background: linear-gradient(0deg, rgba(255,255,255,1) 0%, rgba(255,255,255,0) 40%, rgba(255,255,255,0) 60%, rgba(255,255,255,1) 100%);
+        position: absolute;
+        left:0;
+        top:0;
+        width:100%;
+        height:100%;
+        z-index:15;
+    }
+    <?=$mainContainer;?> .dc-scroll-container:after{
+        content:'';
+        pointer-events: none;
+        position: absolute;
+        left:0;
+        top:50%;
+        transform:translateY(-50%);
+        width:100%;
+        height:50px;
+        z-index: -1;
+        background:#E8E8E8;
+    }
+    <?=$mainContainer;?> .dc-checkbox-container,
+    <?=$mainContainer;?> .dc-checkbox-container label,
+    <?=$mainContainer;?> .dc-checkbox-container input{
+        cursor:pointer
+    }
+    <?=$mainContainer;?> .dc-checkbox-container label{
+        display: block;
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+    }
+
+    <?=$mainContainer;?> .dc-selected,
+    <?=$mainContainer;?> .dc-checkbox-container{
+        background: #fff;
+        color: #000;
+        height: 43px;
+        -webkit-box-shadow: 0px 0px 10px 5px rgb(0 0 0 / 5%);
+        box-shadow: 0px 0px 10px 5px rgb(0 0 0 / 5%);
+        border-radius: 11px;
+        position: relative;
+        margin-bottom: 1rem;
+        cursor:pointer;
+    }
+    <?=$mainContainer;?> .dc-headline-container{
+        display: none;
+    }
+    <?=$mainContainer;?> .dc-selected:hover,
+    <?=$mainContainer;?> .dc-checkbox-container:hover{
+        -webkit-box-shadow: 0px 0px 10px 5px rgb(0 0 0 / 20%);
+        box-shadow: 0px 0px 10px 5px rgb(0 0 0 / 20%);
+    }
+    <?=$mainContainer;?> .dc-selected .inner,
+    <?=$mainContainer;?> .swiper-slide .inner{
+        position:absolute;
+        padding-left:3rem;
+        top:50%;
+        transform:translateY(-50%);
+    }
+    <?=$mainContainer;?> .type-shine:after,
+    <?=$mainContainer;?> .type-chrome:after{
+        content:"";
+        position: absolute;
+        width:100%;
+        top:0;
+        left:0;
+        height: 100%;
+        background: rgb(255,255,255);
+        background: linear-gradient(37deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.2049194677871149) 10%, rgba(255,255,255,0) 37%, rgba(255,255,255,0.6334908963585435) 60%, rgba(255,255,255,0) 85%);
+
+    }
+    <?=$mainContainer;?> .type-chrome:after{
+        background: rgb(255,255,255);
+        background: linear-gradient(37deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.46262254901960786) 35%, rgba(255,255,255,0) 55%, rgba(255,255,255,0.6334908963585435) 75%, rgba(255,255,255,0) 85%);
+    }
+    <?=$mainContainer;?> .dc-canvas-gui {
+        width: calc(100% - 1rem);
+        padding-left: 0.5rem;
+    }
+    <?=$mainContainer;?> .dc-scroll-main-container,
+    <?=$mainContainer;?> .dc-checkbox-container{
+        position:relative;
+    }
+    <?=$mainContainer;?> .hidden{
+        display:none !important;
+    }
+    <?=$mainContainer;?> .dc-sidebar{
+
+    }
+    <?=$mainContainer;?> .dc-sidebar.open-select{
+    }
+    <?=$mainContainer;?> .dc-sidebar .dc-sidebar-overlay {
+        display:none;
+    }
+    <?=$mainContainer;?> .dc-sidebar.open-select .dc-sidebar-overlay,
+    <?=$mainContainer;?> .dc-sidebar-info-text
+    {
+        background: rgba(0,0,0,0.7);
+        display:block;
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 8;
+    }
+    <?=$mainContainer;?> .dc-sidebar-info-text .inner{
+        position: absolute;
+        width: 80%;
+        height:80%;
+        overflow:auto;
+        left:10%;
+        top:10%;
+        background:white;
+        padding:1rem;
+    }
+    <?=$mainContainer;?> label{
+        margin-bottom:.5rem;
+        display: block;
+    }
+    <?=$mainContainer;?> .dc-swiper-symbol {
+        position: absolute;
+        left: 0.5rem;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 2rem;
+        height: 2rem;
+        display: block;
+        border-radius: 50%;
+        overflow: hidden;
+        padding: 0;
+    }
+    <?=$mainContainer;?> .dc-swiper-symbol .inner{
+        width:100%;
+        height:100%;
+        left:0;
+        top:50%;
+        position:absolute;
+    }
+    <?=$mainContainer;?> .dc-babylonjs-legend-controll{
+        position:absolute;
+        z-index: 2;
+        left:50%;
+        transform:translateX(-50%);
+        bottom: 2rem;
+        pointer-events: none;
+    }
+    <?=$mainContainer;?> .dc-babylonjs-legend-controll img{
+        max-width: 88px;
+    }
+    @media screen and (max-width: 768px) {
+        <?=$mainContainer;?> .desktop {
+            display:none;
+        }
+
+        <?=$mainContainer;?> .mobile {
+            display:block;
+        }
+    }
+    @media screen and (min-width: 769px) {
+        <?=$mainContainer;?> .desktop {
+            display:block;
+        }
+
+        <?=$mainContainer;?> .mobile {
+            display:none;
+        }
+    }
+    <?=$mainContainer;?> .dc-checkbox-container{
+        height: 50px;
+        vertical-align: middle;
+        position:relative;
+        cursor: pointer;
+    }
+    <?=$mainContainer;?> .dc-checkbox-container span{
+        position:absolute;
+        top:50%;
+        transform:translateY(-50%);
+        left:0rem;
+        padding-left:3rem;
+        width:100%;
+    }
+    <?=$mainContainer;?> .dc-checkbox-container.checked .unchecked-image{
+        display:none;
+    }
+    <?=$mainContainer;?> .dc-checkbox-container.checked .checked-image{
+        display:block;
+    }
+    <?=$mainContainer;?> .dc-checkbox-container.unchecked .checked-image{
+        display:none;
+    }
+    <?=$mainContainer;?> .dc-checkbox-container.unchecked .unchecked-image{
+        display:block;
+    }
+    <?=$mainContainer;?> .dc-checkbox-container input{
+        display:none;
+    }
+    <?=$mainContainer;?> .dc-checkbox-container .dc-image-container{
+        position:absolute;
+        top:50%;
+        transform:translateY(-50%);
+        width:2rem;
+        height:2rem;
+        left:.5rem;
+        overflow: hidden;
+        border-radius: 50%;
+    }
+    <?=$mainContainer;?> .dc-checkbox-container .dc-image-container img{
+        position:absolute;
+        width:100%;
+        height: auto;
+        left:50%;
+        top:50%;
+        transform:translate(-50%,-50%);
+    }
 
 </style>
-<div class="dc-babylon-js-viewer-container-<?=$this->id;?>">
-    <?php if( $this->headline){ ?>
-        <div class="dc-headline-container">
-            <<?= $this->hl; ?>><?= $this->headline; ?></<?= $this->hl; ?>>
+<div id="<?=str_replace('#','',$mainContainer);?>">
+    <div class="dc-modal">
+        <div class="dc-modal-content-container">
+            <div class="inner">
+                <a class="dc-btn-close">
+                    &#10006;
+                </a>
+                <div class="dc-modal-content">
+
+                </div>
+                <div class="dc-modal-image-container">
+                    <div class="dc-image-container">
+                        <img class="dc-renderimage" src=""/>
+                    </div>
+                    <a class="dc-download">Download</a>
+                </div>
+            </div>
         </div>
-    <?php } ?>
-    <div id="canvas-container">
-        <div class="loading-container-<?=$this->id;?>">
+    </div>
+
+    <div class="dc-canvas-container">
+        <div class="dc-loading-container">
             <div class="lds-ring"><div></div><div></div><div></div><div></div></div>
         </div>
         <?php if($enableInteractButton){ ?>
-        <div class="viewer-controller">
-            <a class="viewer-interaction-<?=$this->id;?>">
-                <img class="icondeactivated" src="bundles/contaobabylonjsviewer/images/3D-interact-1.png">
-                <img class="iconactivated" src="bundles/contaobabylonjsviewer/images/3D-interact-2.png">
+        <div class="dc-viewer-controller">
+            <a class="dc-viewer-interaction">
+                <img class="dc-icondeactivated" src="bundles/contaobabylonjsviewer/images/3D-interact-1.png">
+                <img class="dc-iconactivated" src="bundles/contaobabylonjsviewer/images/3D-interact-2.png">
             </a>
         </div>
         <?php } ?>
         <div class="row">
-            <div class="col-12 <?php if($enableGuiVisibility || $enableGuiAnimations){ echo "col-md-9"; }?>">
-                <div class="viewer-flap"></div>
-                <div class="canvas3d-container shadow_style2">
-                    <canvas id="canvas3d-<?=$this->id;?>" style="width:100%;height:100%;"></canvas>
+            <div class="col-12 paste-dc-canvas-container <?php if($enableGuiVisibility || $enableGuiAnimations || $enableGuiSelect){ echo "col-md-9"; }?>">
+                <div class="dc-viewer-flap"></div>
+                <div class="dc-canvas3d-container">
+                    <canvas class="dc-canvas-3d" style="width:100%;height:100%;"></canvas>
+
+                    <div class="dc-babylonjs-controller-container controller-container-left">
+                        <a class="dc-babylonjs-controller dc-ctrl-screenshot" title="take screenshot">take screenshot</a>
+                        <a class="dc-babylonjs-controller dc-ctrl-reset" title="stop/play autorotate">stop play autorotate</a>
+                    </div>
+                    <div class="dc-babylonjs-controller-container controller-container-right">
+                        <a class="dc-babylonjs-controller dc-ctrl-fullscreen" title="fullscreen toggle">Fullscreen toggle</a>
+                    </div>
+                    <div class="dc-babylonjs-legend-controll">
+                        <img class="desktop" src="./bundles/contaobabylonjsviewer/images/dc-nav-desktop.png" >
+                        <img class="mobile" src="./bundles/contaobabylonjsviewer/images/dc-nav-mobile.png" >
+                    </div>
                 </div>
             </div>
-            <div class="col-12 <?php if($enableGuiVisibility || $enableGuiAnimations){ echo "col-md-3"; }?>">
-                <div class="canvas-gui">
-                    <?php if($enableGuiVisibility){?>
+            <div class="col-12 dc-sidebar <?php if($enableGuiVisibility || $enableGuiAnimations || $enableGuiSelect){ echo "col-md-3"; }?>">
+                <div class="dc-sidebar-overlay"></div>
+                <div class="dc-sidebar-info-text hidden">
+                    <a class="dc-btn-close">
+                        &#10006;
+                    </a>
+                    <div class="inner">
+                    </div>
+                </div>
+                <div class="dc-canvas-gui">
+                    <?php /*if($enableGuiVisibility){?>
                         <div class="container-checkbox">
                             <h3 class="headline">
                                 Show Hide Elements
                             </h3>
-                            <div id="checkbox-container-<?=$this->id;?>" class="checkbox-container">
+                            <div id="" class="checkbox-container checkbox-container">
                             </div>
                         </div>
-                    <?php } ?>
+                    <?php }*/ ?>
                     <?php if($enableGuiAnimations){?>
                         <div class="container-animations">
                             <h3 class="headline">
                                 Play/Stop Animations
                             </h3>
-                            <div id="animation-container-<?=$this->id;?>" class="checkbox-container">
+                            <div class="animation-container checkbox-container">
                             </div>
                         </div>
                     <?php } ?>
+                    <?php /*if($enableGuiSelect){?>
+                        <div class="dc-container-select-boxes">
+
+                            <?php if( $this->headline){ ?>
+                                    <<?= $this->hl; ?>><?= $this->headline; ?></<?= $this->hl; ?>>
+                            <?php } ?>
+                            <div class="select-container checkbox-container">
+                            </div>
+                        </div>
+                    <?php }*/ ?>
                 </div>
             </div>
         </div>
     </div>
+
     <script type="module">
+        if(typeof window.dcBabylonJsResolver === 'undefined' || (!window.dcBabylonJsResolver && !window.dcBabylonJsResolver.isFulfilled()  && !window.dcBabylonJsResolver.isPending()) ){
+            /**
+             * This function allow you to modify a JS Promise by adding some status properties.
+             * Based on: http://stackoverflow.com/questions/21485545/is-there-a-way-to-tell-if-an-es6-promise-is-fulfilled-rejected-resolved
+             * But modified according to the specs of promises : https://promisesaplus.com/
+             */
+            function MakeQuerablePromise(promise) {
+                // Don't modify any promise that has been already modified.
+                if (promise.isFulfilled) return promise;
 
-        import * as DSB from "./bundles/contaobabylonjsviewer/js/duncrow-bjs-viewer.min.js";
+                // Set initial state
+                var isPending = true;
+                var isRejected = false;
+                var isFulfilled = false;
 
-
-        if(typeof BABYLON !== 'undefined'){
-
-
-            let userInteractionEnabled = true;
-            let viewer = new DSB.DCBabylonJsViewer("canvas3d-<?=$this->id;?>", {
-                <?php
-                for($i = 0; $i < count($settings); $i++){
-                    if(count($settings[$i]) && array_search($settings[$i][0], $cameraSettings) !== false){
-                        ?>
-                        <?= $settings[$i][0] ?> : <?= (str_contains($settings[$i][0],'Color'))?'new BABYLON.Color3'.$settings[$i][1]:$settings[$i][1] ?>,
-                        <?php
+                // Observe the promise, saving the fulfillment in a closure scope.
+                var result = promise.then(
+                    function(v) {
+                        isFulfilled = true;
+                        isPending = false;
+                        return v;
+                    },
+                    function(e) {
+                        isRejected = true;
+                        isPending = false;
+                        throw e;
                     }
-                }
-                ?>
+                );
 
-            },{
-                <?php
-                for($i = 0; $i < count($settings); $i++){
-                    if(count($settings[$i]) && array_search($settings[$i][0], $environmentSettings) !== false){
-                    ?>
-                    <?= $settings[$i][0] ?> : <?= (str_contains($settings[$i][0],'Color'))?'new BABYLON.Color3'.$settings[$i][1]:$settings[$i][1] ?>,
-                    <?php
-                    }
-                }
-                ?>
-            });
-
-
-            <?php if($deactivateViewerOnStart){ ?>
-            userInteractionEnabled = false;
-            changeInteraction();
-            <?php } ?>
-            <?php if( $focusOnHelperName){ ?>
-            var blackListString = "<?= $focusOnHelperName ?>";
-            var blackListArray = blackListString.split(',');
-            viewer.blacklist = [...new Set([...blackListArray,...["__root__"]])];
-            <?php } ?>
-            <?php if( $toggleVisibilityList){ ?>
-            var whiteListString = "<?= $toggleVisibilityList ?>";
-            var whiteListArray = whiteListString.split(',');
-            viewer.whitelist = [...new Set([...whiteListArray,...["__root__"]])];
-            <?php } ?>
-            <?php
-            if($activateMeshSelection){
-                ?>
-                viewer.registerOnMeshSelection(function(parameters){
-
-                    var camera = viewer.camera;
-                    if(parameters && typeof parameters.meshName !== 'undefined' && parameters.meshName.includes('Sphere')){
-
-                    }else{
-                        camera.zoomOnMeshes();
-                    }
-                }, <?= $highlightColor ?>);
-             <?php
+                result.isFulfilled = function() { return isFulfilled; };
+                result.isPending = function() { return isPending; };
+                result.isRejected = function() { return isRejected; };
+                return result;
             }
-            ?>
+            var checkpromise = import('./bundles/contaobabylonjsviewer/js/duncrow-bjs-viewer.min.js').then((DSB) => {
+                let viewer = new DSB.DCBabylonJsViewer();
 
-            var animationTest = document.querySelectorAll('.playstop');
-            animationTest.forEach(elem => {
-                elem.addEventListener('click', (event) => {
-                    if(typeof event.target.attributes["data-id"] !== 'undefined' &&
-                        typeof event.target.attributes["data-id"]["value"] !== 'undefined'){
-                        playStop(event.target.attributes["data-id"]["value"])    ;
+                viewer.loadingFinished = (canvasId) =>{
+
+                }
+                viewer.loadingStarted = (canvasId) =>{
+
+                }
+                /*****
+                 *
+                 * @type {HTMLElement}
+                 */
+                // Begin setup
+
+
+
+// End setup
+
+                /*****
+                 *
+                 * @type {HTMLElement}
+                 */
+
+                window.addEventListener('mousedown', function(e){
+                    if (!e.target.className.toString().includes('dc-selected')
+                        && !e.target.className.toString().includes('dc-scroll-container')
+                        && !e.target.className.toString().includes('swiper-slide')){
+                        Array.from(document.querySelectorAll('.dc-scroll-container')).forEach(x=>x.classList.add('hidden'));
+                        Array.from(document.querySelectorAll('.dc-sidebar')).forEach(x=>x.classList.remove('open-select'));
+
                     }
                 });
+                return {viewer, DSB};
             });
 
-            <?php if($enableInteractButton){ ?>
-            var clickMe = document.querySelector('.viewer-interaction-<?=$this->id;?>');
-            clickMe.addEventListener('click', function (event) {
-                event.preventDefault();
-                userInteractionEnabled = !userInteractionEnabled;
-                changeInteraction();
-            });
-            <?php } ?>
+            window.dcBabylonJsResolver = MakeQuerablePromise(checkpromise);
+        }
+    </script>
 
-            // Show an element
-            var setClass = function (elem, className) {
-                elem[0].classList.add(className);
+    <script type="module">
+        window.dcBabylonJsResolver.then((viewerDSB) => {
+            const viewer = viewerDSB.viewer;
+            const DSB = viewerDSB.DSB;
+            const mainContainer = document.querySelector('<?=$mainContainer;?>');
+            let cameraSettings = {
+<?php for($i = 0; $i < count($settings); $i++){
+  if(count($settings[$i]) && array_search($settings[$i][0], $cameraSettings) !== false){ ?>
+<?= $settings[$i][0] ?> : <?= (str_contains($settings[$i][0],'Color'))?'new BABYLON.Color3'.$settings[$i][1]:$settings[$i][1] ?>,
+<?php }
+} ?>
             };
-            var unsetClass = function (elem, className) {
-                elem[0].classList.remove(className);
-            };
-            var toggle = function (elem, className) {
-                elem[0].classList.toggle(className);
-            };
-
-
-            viewer.backgroundColor = <?= $backgroundColor; ?>;
-            viewer.loadingStarted = () => {
-                var loadingContainer = document.getElementsByClassName('loading-container-<?=$this->id;?>');
-                unsetClass(loadingContainer, 'hidden');
-
-            };
-            viewer.loadingFinished = () =>{
-                viewer.engine.resize();
-                var loadingContainer = document.getElementsByClassName('loading-container-<?=$this->id;?>');
-                setClass(loadingContainer, 'hidden');
-                <?php
-                if($focusOnHelperName){ ?>
-                var infopoints = new DSB.DCInfopoints(viewer, "<?= $focusOnHelperName ?>", "<?= $focusImagePath ?>", <?= $focusRadius ?>);
-                <?php } ?>
-                <?php if($enableGuiVisibility){?>
-                var gui = new DSB.DCGui(viewer, "checkbox-container-<?=$this->id;?>",<?=$this->id;?>,  DSB.DCGuiModel.ShowHideElements );
-                <?php } ?>
-                <?php if($enableGuiAnimations){?>
-                var gui = new DSB.DCGui(viewer, "animation-container-<?=$this->id;?>",<?=$this->id;?>,  DSB.DCGuiModel.AnimationElements );
-                <?php } ?>
+            let environmentSettings = {
+<?php for($i = 0; $i < count($settings); $i++){
+if(count($settings[$i]) && array_search($settings[$i][0], $environmentSettings) !== false){ ?>
+<?= $settings[$i][0] ?> : <?= (str_contains($settings[$i][0],'Color'))?'new BABYLON.Color3'.$settings[$i][1]:$settings[$i][1] ?>,
+<?php }
+} ?>
             }
-            function playStop(number){
-                viewer.scene.animationGroups.forEach((animationGroup,index) => {
-                    if(index != number){
-                        animationGroup.stop();
-                    }
-                })
+            let loadAssetPaths = [<?php for($i = 0; $i < count($objFile); $i++){ echo "'".$objFile[$i][0]."',"; } ?>];
+            <?php if( $this->code){ echo $this->code; } ?>
 
-                var group = viewer.scene.animationGroups[number];
-                if (!group.isStarted) {
-                    group.play(!(number == 2));
-                }else {
-                    group.stop();
-                }
+            function highlightObject(parameters) {
             }
-            <?php if($enableInteractButton){ ?>
-            function changeInteraction(){
-                if(userInteractionEnabled){
-                    var canvas = document.getElementById('canvas3d-<?=$this->id;?>');
-                    unsetClass(canvas, 'disabled');
-                    var interaction = document.getElementsByClassName('viewer-interaction-<?=$this->id;?>');
-                    unsetClass(interaction, 'active');
+            let highlightcolor = <?= $highlightColor; ?>;
+            let scene = viewer.addScene(mainContainer.querySelector('.dc-canvas-3d'),"<?=$mainContainer?>", loadAssetPaths,cameraSettings,environmentSettings,true <?php if($activateMeshSelection){ ?>, {callback: highlightObject, selectionOutlineColor: highlightcolor <?php if($zoomSelectedMesh){ ?> ,zoomSelectedMesh:false<?php } ?> }<?php }else{ ?>, {} <?php } ?>);
+                scene.loadingFinished.then(()=>{
+                    <?php if( $blackList){ ?>
+                    var blackListString = "<?= $blackList ?>";
+                    var blackListArray = blackListString.split(',');
+                    blackListArray.forEach(meshName =>{
+                        scene.scene.meshes.forEach(mesh =>{
+                            if(mesh.id.includes(meshName)){
+                                mesh.isVisible = false;
+                            }
+                        })
+                    })
+                    scene.blacklist = [...new Set([...blackListArray,...["__root__"]])];
+                    <?php } ?>
+                    <?php if( $focusOnHelperName){ ?>
+                    var blackListString = "<?= $focusOnHelperName ?>";
+                    var blackListArray = blackListString.split(',');
+                    scene.blacklist = [...new Set([...blackListArray,...["__root__"]])];
+                    <?php } ?>
 
-                }else{
-                    var canvas = document.getElementById('canvas3d-<?=$this->id;?>');
-                    setClass(canvas, 'disabled');
-                    var interaction = document.getElementsByClassName('viewer-interaction-<?=$this->id;?>');
-                    setClass(interaction, 'active');
-                }
-                viewer.userInteractionEnabled = userInteractionEnabled;
-            }
-            <?php } ?>
-            <?php
-            $objPath = "";
-            for($i = 0; $i < count($objFile); $i++){
-                if($objFile[$i][1] == 'mtl'){
-                    ?>
-                    viewer.loadMTLFile('<?=$objFile[$i][0]?>');
+
+                    <?php if( $toggleVisibilityList){ ?>
+                    var whiteListString = "<?= $toggleVisibilityList ?>";
+                    var whiteListArray = whiteListString.split(',');
+                    scene.whitelist = [...new Set([...whiteListArray,...["__root__"]])];
+                    <?php } ?>
+
+                    scene.engine.resize();
+                    var loadingContainer = mainContainer.querySelector('.dc-loading-container');
+                    loadingContainer.classList.add('hidden');
+
+
                     <?php
-                }else if($objFile[$i][1] == 'jpg' || $objFile[$i][1] == 'png'){
-                    ?>
-                    var materialTexture = new BABYLON.StandardMaterial("grass0", viewer.scene);
-                    materialTexture.diffuseTexture = new BABYLON.Texture("<?=$objFile[$i][0]?>", viewer.scene);
-                    <?php
-                }else{
-                    $objPath = $objFile[$i][0];
-                }
+                    if($focusOnHelperName){ ?>
 
-            }
-            if( $objPath){
+                    addInfopoints();
 
-            ?>
-                viewer.loadObject("<?=$objPath?>").then((meshes)=>{
-                    if(typeof materialTexture !== 'undefined' && materialTexture){
-                        for(var i = 0; i < meshes.length; i++){
-                            meshes[i].material = materialTexture;
-                            meshes[i].isVisible = false;
+
+                    <?php } ?>
+                    <?php /*if($enableGuiVisibility){?>
+                        scene.addGui("checkbox-container",<?=$this->id;?>, '',  0, '' );
+                        //var gui = new DSB.DCGui(viewer, "checkbox-container-<?//=$this->id;?>//",<?//=$this->id;?>//,  DSB.DCGuiModel.ShowHideElements );
+                    <?php }*/ ?>
+                    <?php if($enableGuiSelect){?>
+
+                    if(typeof options !== 'undefined' && options.length){
+
+                        for(var i = 0; i< options.length; i++){
+                            var containerId = "select-container";
+                            let selectId = "e"+i;
+                            scene.addGui(mainContainer.querySelector('.dc-sidebar'), selectId, DSB.DC_GUI_TYPE.CustomElements, options[i], (swiperId)=>{
+                                if(swiperId.className.includes('checkbox')){
+                                }else{
+                                    initSwiperSlider(swiperId);
+                                    mainContainer.querySelector('.dc-sidebar').classList.add('open-select');
+                                }
+                            });
+                            var element = mainContainer.querySelector('.dc-scroll-main-container-'+selectId+' .swiper-slide');
+                            if(element){
+                                var elementSelected = mainContainer.querySelector('.dc-scroll-main-container-'+selectId+' .dc-selected');
+
+                                if(element && elementSelected) {
+                                    elementSelected.innerHTML = element.innerHTML;
+                                }
+                            }
                         }
                     }
+                    <?php } ?>
+                    <?php /*if($enableGuiAnimations){?>
+                    scene.addGui("animation-container",<?=$this->id;?>,'',  1, '' );
+                    //var gui = new DSB.DCGui(viewer, "animation-container-<?//=$this->id;?>//",<?//=$this->id;?>//,  DSB.DCGuiModel.AnimationElements );
+                    <?php } */?>
+
+
 
                 });
-                <?php
-            }
-            ?>
-        }
+                scene.loadingStarted.then(()=>{
+                    var loadingContainer = mainContainer.querySelector('.dc-loading-container');
+                    loadingContainer.classList.remove('hidden');
+                });
 
+            var addInfopoints = () => {
+                var focusImagePath = [
+                    {
+                        imagePath:"./bundles/contaobabylonjsviewer/images/polymode__icon-circle-palette.png",
+                        meshNamePattern: "dc-helper-zoom-color"
+                    },
+                    {
+                        imagePath:"./bundles/contaobabylonjsviewer/images/polymode__icon-circle-palette.png",
+                        meshNamePattern: "dc-helper-color"
+                    },
+                    {
+                        imagePath:"./bundles/contaobabylonjsviewer/images/polymode__icon-circle-ear.png",
+                        meshNamePattern: "dc-helper-zoom-ear"
+                    },
+                    {
+                        imagePath:"./bundles/contaobabylonjsviewer/images/polymode__icon-circle-ear.png",
+                        meshNamePattern: "dc-helper-ear"
+                    },
+                    {
+                        imagePath:"./bundles/contaobabylonjsviewer/images/polymode__icon-circle-microphone.png",
+                        meshNamePattern: "dc-helper-zoom-visibility"
+                    },
+                    {
+                        imagePath:"./bundles/contaobabylonjsviewer/images/polymode__icon-circle-microphone.png",
+                        meshNamePattern: "dc-helper-visibility"
+                    },
+                    {
+                        imagePath:"./bundles/contaobabylonjsviewer/images/polymode__icon-circle-info.png",
+                        meshNamePattern: "dc-helper-zoom-info"
+                    },
+                    {
+                        imagePath:"./bundles/contaobabylonjsviewer/images/polymode__icon-circle-info.png",
+                        meshNamePattern: "dc-helper-info"
+                    },
+
+                    {
+                        imagePath:"./bundles/contaobabylonjsviewer/images/polymode__icon-circle-info.png",
+                        meshNamePattern: "dc-helper-zoom"
+                    },
+                ];
+                var infopointOptions = {
+                    width:60,
+                    height:60,
+                    zoom: ['dc-helper-zoom'],
+                    visibility: ['dc-helper-visibility', 'dc-helper-zoom-visibility'],
+                    color:["dc-helper-color", "dc-helper-zoom-color"],
+                    info: ["dc-helper-info", "dc-helper-zoom-info"]
+                }
+                scene.addInfopoints("<?= $focusOnHelperName ?>", focusImagePath, <?= $focusRadius ?>, infopointOptions);
+                scene.clickedInfopoint = (returnObject) => {
+                    var attrName = returnObject.targetMeshId;
+                    if(returnObject.type.includes(DSB.DC_INFOPOINTS_TYPE.visibility)){
+                        var visibilityElement = mainContainer.querySelector('[dc-controll-type="visibility"][dc-controll-id="akku"] .dc-checkbox-container');
+                        var inputElement = visibilityElement.querySelector('input');
+                        if(visibilityElement.className.includes('unchecked')){
+                            visibilityElement.classList.remove('unchecked');
+                            visibilityElement.classList.add('checked');
+                            inputElement.checked = true;
+                        }else {
+                            visibilityElement.classList.remove('checked');
+                            visibilityElement.classList.add('unchecked');
+                            inputElement.checked = false;
+                        }
+
+
+                    }
+                    if(attrName && returnObject.type.includes(DSB.DC_INFOPOINTS_TYPE.color)){
+                        if(scene.gui){
+                            scene.gui.openGuiSlider(attrName, "color", (swiperId)=>{
+
+                                initSwiperSlider(swiperId);
+                                mainContainer.querySelector('.dc-sidebar').classList.add('open-select');
+                            });
+                        }
+                    }
+                    if(returnObject.type.includes(DSB.DC_INFOPOINTS_TYPE.info)){
+                        if(typeof returnObject.targetMeshId !== 'undefined' && returnObject.targetMeshId ){
+                            var elem = mainContainer.querySelector('.dc-sidebar-info-text');
+                            var textContainer = mainContainer.querySelector('.dc-sidebar-info-text .inner');
+                            textContainer.innerHTML = info[0].text;
+                            elem.classList.remove("hidden");
+                        }
+
+                    }
+
+
+                };
+            }
+
+            var resetButton = mainContainer.querySelector('.dc-ctrl-reset');
+            resetButton.addEventListener('click', async function (event) {
+                // event.preventDefault();
+                // scene.resetScene();
+                // scene.scene.meshes.forEach(mesh => {
+                //     mesh.isVisible = false;
+                // });
+                // setTimeout(addInfopoints, 300);
+                // // addInfopoints();
+            });
+            var screenshotButton = mainContainer.querySelector('.dc-ctrl-screenshot');
+            screenshotButton.addEventListener('click', async function (event) {
+                event.preventDefault();
+                var imageSrc = await scene.takeScreenshot({width: '1280', height: '720'});
+                var image = mainContainer.querySelector('.dc-renderimage');
+                image.src = imageSrc;
+                var downloadbutton = mainContainer.querySelector('.dc-download');
+                downloadbutton.href = imageSrc;
+                downloadbutton.download = 'screenshot.png';
+                fadeModalIn("Screenshot");
+            });
+            var fullscreenButton = mainContainer.querySelector('.dc-ctrl-fullscreen');
+            if(fullscreenButton){
+                fullscreenButton.addEventListener('click', function (event) {
+                    event.preventDefault();
+                    var modalContentContainer = mainContainer.querySelector('.dc-modal-content-container');
+                    modalContentContainer.classList.add('fullscreen');
+                    var canvasContainer = mainContainer.querySelector('.dc-canvas3d-container');
+                    var fullscreenContentContainer = mainContainer.querySelector('.dc-modal-image-container');
+                    if(canvasContainer && fullscreenContentContainer){
+                        fullscreenContentContainer.appendChild(canvasContainer);
+                        setTimeout(()=>{scene.resize();},40);
+                    }
+                    fadeModalIn("",true,(isVisible)=>{});
+                });
+            }
+            var closeButton = mainContainer.querySelector('.dc-modal .dc-btn-close');
+            if(closeButton){
+                closeButton.addEventListener('click', function (event) {
+                    event.preventDefault();
+                    var canvasContainerFullscreen = mainContainer.querySelector('.dc-modal-image-container .dc-canvas3d-container');
+                    if(canvasContainerFullscreen){
+                        fadeModalIn("", false, (isVisible)=> {});
+                    }else{
+                        fadeModalIn("", false);
+                    }
+                    var modalContentContainer = mainContainer.querySelector('.dc-modal-content-container');
+                    modalContentContainer.classList.remove('fullscreen');
+
+                    var canvasContainerOrig = mainContainer.querySelector('.paste-dc-canvas-container');
+                    if(canvasContainerFullscreen && canvasContainerOrig){
+                        canvasContainerOrig.appendChild(canvasContainerFullscreen);
+                        setTimeout(()=>{viewer.resize();},40);
+                    }
+
+                });
+            }
+            var closeInfoButton = mainContainer.querySelector('.dc-sidebar-info-text .dc-btn-close');
+            if(closeInfoButton){
+                closeInfoButton.addEventListener('click', function (event) {
+                    var elem = mainContainer.querySelector('.dc-sidebar-info-text');
+                    elem.classList.add("hidden");
+                });
+            }
+
+            function fadeModalIn(text = "", fadeIn = true, complete = (isVisible)=>{},  firstIteration = true){
+                var modal = mainContainer.querySelector('.dc-modal');
+                var modalText = mainContainer.querySelector(".dc-modal .dc-modal-content");
+                if(modalText){
+                    while (modalText.firstChild) {
+                        modalText.removeChild(modalText.firstChild);
+                    }
+                    modalText.innerHTML = '';
+                    if(text != ''){
+                        modalText.innerHTML = '<h3>'+text+'</h3>';
+                    }
+                }
+                if(!fadeIn){
+                    if(firstIteration){
+                        modal.style.opacity = 1;
+                    }
+
+                    modal.style.opacity = parseFloat(modal.style.opacity) - 0.1;
+                    if((modal.style.opacity)<0 ){
+                        modal.style.display="none";
+                        complete(false);
+                    }else{
+                        setTimeout(()=>{fadeModalIn(text, fadeIn,complete, false)},40)
+                    }
+                }else{
+                    if(firstIteration){
+                        modal.style.opacity = 0;
+                    }
+
+                    modal.style.display="block";
+                    modal.style.opacity = parseFloat(modal.style.opacity) + 0.1;
+                    if((modal.style.opacity)>1){
+                        complete(true);
+                    }else{
+                        setTimeout(()=>{fadeModalIn(text, fadeIn,complete, false)},40);
+                    }
+                }
+            }
+
+
+            function initSwiperSlider(container){
+                // var initSlideIndex = 0;
+                // var searchText = mainContainer.querySelector('#'+containerId+' .dc-selected');
+                // var sliderItems = Array.from(mainContainer.querySelectorAll('#'+containerId+' .swiper-slide'));
+                // var searchItem = sliderItems.find(x=> x.innerText == searchText.innerText);
+                // if(searchItem){
+                //     initSlideIndex = searchItem.getAttribute('data-swiper-slide-index');
+                // }
+                if(!container.querySelector('.swiper').className.includes('swiper-initialized')){
+                    const swiper = new Swiper(container.querySelector('.swiper'), {
+                        // Optional parameters
+                        direction: 'vertical',
+                        loop: true,
+                        loopAdditionalSlides: 30,
+
+                        // And if we need scrollbar
+                        // scrollbar: {
+                        //     el: '.swiper-scrollbar',
+                        // },
+                        // initialSlide: initSlideIndex,
+                        slidesPerView: 5,
+                        loopedSlides: 5,
+                        centeredSlides:true,
+                        mousewheel: {
+                            invert: true,
+                        },
+                        on:{
+                            afterInit:(e) => {
+                                // e.update(true);
+                                var searchPattern = container.querySelector(' .dc-selected').innerText;
+                                if(searchPattern){
+                                    var activeElement = Array.from(container.querySelector(" .swiper-wrapper").querySelectorAll('.swiper-slide')).find(x=> x.innerText == searchPattern);
+                                    if(activeElement?.dataset?.swiperSlideIndex){
+                                        e.slideToLoop(activeElement?.dataset?.swiperSlideIndex);
+                                    }
+                                }else{
+
+                                }
+
+
+                            },slideChangeTransitionEnd:(e) => {
+                                if(typeof e !== 'undefined'){
+                                    e.update(true);
+                                }
+                            },transitionEnd:(e) => {
+                                if(typeof e !== 'undefined'){
+                                    e.update(true);
+                                }
+
+                                var element = container.querySelector(' .swiper-slide-active');
+                                if(element){
+
+                                    var elementSelected = container.querySelector(' .dc-selected');
+
+                                    if(element && elementSelected){
+                                        elementSelected.innerHTML = element.innerHTML;
+
+                                        var actionType = element.getAttribute('dc-type');
+                                        var actionTarget = element.getAttribute('dc-target');
+                                        var actionTargetSet = element.getAttribute('dc-target-set');
+                                        var actionlimitMeshes = element.getAttribute('dc-limitmeshes');
+                                        if(typeof actionType !== 'undefined' && actionType == 'material' &&
+                                            typeof actionTarget !== 'undefined' && actionTarget
+                                        ){
+                                            var material = scene.scene.getMaterialById(actionTarget);
+                                            if(typeof material !== 'undefined' && material){
+                                                var changeMeshes = scene.usedMeshesList;
+                                                if(typeof actionlimitMeshes !== 'undefined' && actionlimitMeshes){
+                                                    changeMeshes = changeMeshes.filter(x=> x.includes(actionlimitMeshes));
+                                                }
+                                                changeMeshes.forEach(meshName => {
+                                                    scene.scene.getMeshById(meshName).material = material;
+                                                })
+                                            }
+                                        }else if(typeof actionType !== 'undefined' && actionType == 'mesh' &&
+                                            typeof actionTarget !== 'undefined' && actionTarget &&
+                                            typeof actionTargetSet !== 'undefined' && actionTargetSet
+                                        ){
+                                            if(actionTargetSet == 'hide'){
+                                                scene.scene.getMeshById(actionTarget).isVisible = false;
+                                            }else if(actionTargetSet == 'show'){
+                                                scene.scene.getMeshById(actionTarget).isVisible = true;
+                                            }else if(actionTargetSet == 'toggle'){
+                                                scene.scene.getMeshById(actionTarget).isVisible = !scene.scene.getMeshById(actionTarget).isVisible;
+                                            }
+
+
+                                        }
+
+
+                                        if(!element.getAttribute('clickListener')){
+
+                                            element.addEventListener('click', (evt) => {
+                                                evt.stopPropagation();
+                                                element.setAttribute('clickListener','true');
+                                                var scrollContainer = container.querySelector(' .dc-scroll-container');
+                                                scrollContainer.classList.add('hidden');
+                                                mainContainer.querySelector('.dc-sidebar').classList.remove('open-select');
+                                            }, false);
+                                        }
+
+                                    }
+                                }
+                            },
+                        }
+                    });
+                }
+
+            }
+        });
 
     </script>
 </div>
 <?php } ?>
+
 

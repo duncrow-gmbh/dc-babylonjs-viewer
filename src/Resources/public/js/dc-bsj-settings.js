@@ -18,6 +18,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
                 ["rotationSpeed","number", "Rotation speed, Default: 0.1"]
             ];
             var settingsEnvironment = [
+                ["backgroundColor","color", "set Black (0,0,0) to disable it"],
                 ["createGround","boolean"],
                 ["groundSize","number"],
                 ["createSkybox","boolean"],
@@ -30,17 +31,31 @@ document.addEventListener("DOMContentLoaded", function(event) {
                 // ["cameraExposure","text"],
             ]
             var settingsOthers = [
-                ["backgroundColor","color", "set Black (0,0,0) to disable it"],
                 ["deactivateViewerOnStart","boolean"],
                 ["highlightOnClick","boolean"],
+                ["zoomSelectedMesh","boolean"],
                 ["highlightColor","color", "set Black (0,0,0) to disable it"],
                 ["focusOnHelperName", "text", "Enter the helpername for the infopoints. e.g. 'dc-helper' -> adds all variation like 001.dc-helper, dc-helper-helper-10, ..."],
                 ["focusImagePath", "text", "URL to the focus image"],
                 ["focusRadius", "number", "Set zoom to infopoint radius, e.g. 5"],
                 ["toggleVisibilityList", "text", "show/hide able elements, comma separated, like 'object-top, object-bottom, object', or leave empty to detect automatically"],
-                ["enableGuiVisibility","boolean"],
-                ["enableGuiAnimations","boolean"],
+                ["blackList", "text", "elements, comma separated, to hide"],
+                // ["enableGuiVisibility","boolean"],
+                ["enableGuiSelect","boolean"],
+                // ["enableGuiAnimations","boolean"],
                 ["enableInteractButton","boolean"],
+            ]
+            var settingsList = [
+                {
+                    name: 'Symbols',
+                    fields: [
+                        ['searchName','text', 'Search Pattern which 3D Object will be replaced with an image'],
+
+                    ],
+                    options : [
+
+                    ]
+                }
             ]
 
             var elements = [];
