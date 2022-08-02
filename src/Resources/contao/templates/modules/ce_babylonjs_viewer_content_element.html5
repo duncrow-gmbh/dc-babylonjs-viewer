@@ -6,6 +6,8 @@ if (TL_MODE == 'BE') {?>
 }
 if (TL_MODE != 'BE') {
 
+
+    $GLOBALS['TL_HEAD'][] = '<script src="https://code.jquery.com/pep/0.4.3/pep.js"></script>';
     $GLOBALS['TL_HEAD'][] = '<script src="https://cdn.jsdelivr.net/npm/babylonjs@5.14.0/babylon.js"></script>';
     $GLOBALS['TL_HEAD'][] = '<script src="https://cdn.jsdelivr.net/npm/babylonjs-loaders@5.14.0/babylonjs.loaders.min.js"></script>';
     $GLOBALS['TL_HEAD'][] = '<script src="https://cdn.jsdelivr.net/npm/babylonjs-gui@5.14.0/babylon.gui.min.js"></script>';
@@ -21,7 +23,7 @@ if (TL_MODE != 'BE') {
     }
     $cameraSettings = ["radius","minZ","maxZ","minZoom","maxZoom","upperVerticalAngelLimit","lowerVerticalAngelLimit","upperHorizontalAngelLimit","lowerHorizontalAngelLimit","panningSensibility","wheelPrecision","useAutoRotationBehavior","rotationSpeed"];
     $environmentSettings = ["backgroundColor","createGround","groundSize","createSkybox","skyboxSize","skyboxColor","groundColor","groundShadowLevel","setupImageProcessing","cameraContrast","cameraExposure"];
-    $otherSettings = ["deactivateViewerOnStart","highlightOnClick","highlightColor", "focusOnHelperName", "focusImagePath", "focusRadius", "toggleVisibilityList","blackList", "enableGuiVisibility", "enableGuiAnimations", "enableInteractButton", "enableGuiSelect"];
+    $otherSettings = ["sceneEnvironmentTextur", "deactivateViewerOnStart","highlightOnClick","highlightColor", "focusOnHelperName", "focusImagePath", "focusRadius", "toggleVisibilityList","blackList", "enableGuiVisibility", "enableGuiAnimations", "enableInteractButton", "enableGuiSelect"];
 
     $zoomSelectedMesh = false;
     $activateMeshSelection = false;
@@ -32,6 +34,7 @@ if (TL_MODE != 'BE') {
     $focusRadius = 5;
     $toggleVisibilityList = "";
     $blackList = "";
+    $sceneEnvironmentTextur = "";
     $enableGuiVisibility = false;
     $enableGuiAnimations = false;
     $enableGuiSelect = false;
@@ -65,26 +68,30 @@ if (TL_MODE != 'BE') {
                 $enableGuiSelect = filter_var($settings[$i][1], FILTER_VALIDATE_BOOLEAN) ;
             } else if ($settings[$i][0] == "enableInteractButton") {
                 $enableInteractButton = filter_var($settings[$i][1], FILTER_VALIDATE_BOOLEAN) ;
-            }
-            else if ($settings[$i][0] == "blackList") {
+            } else if ($settings[$i][0] == "blackList") {
                 $blackList = $settings[$i][1];
+            }else if ($settings[$i][0] == "sceneEnvironmentTextur") {
+                $sceneEnvironmentTextur = $settings[$i][1];
             }
-
         }
     }
 
     $mainContainer = "#dc-babylon-js-viewer-container-".$this->id;
+    $canvasContainer = "#dc-canvas-container-".$this->id;
     $modalContainer = "#dc-modal-".$this->id;
+    $modalContainerCopy = "#dc-modal-copy-".$this->id;
 
     ?>
 <!-- templates/ce_my_content_element.html5 -->
 <style>
+    <?=$modalContainerCopy;?>,
     <?=$mainContainer;?>{
         background:white;
 
     }
+    <?=$modalContainerCopy;?>  .dc-fps-viewer,
     <?=$modalContainer;?> .dc-fps-viewer,
-    <?=$mainContainer;?> .dc-fps-viewer {
+    <?=$canvasContainer;?> .dc-fps-viewer {
         background: rgba(255,255,255,.5);
         padding: 0.5rem;
         font-size: 12px;
@@ -95,17 +102,20 @@ if (TL_MODE != 'BE') {
         top: 1rem !important;
         pointer-events: none;
     }
-    <?=$mainContainer;?>{
+    <?=$modalContainerCopy;?>,
+    <?=$mainContainer;?>,
+    <?=canvasContainer;?>{
         position: relative;
-        margin: 3rem 0;
+        /*margin: 10rem 0;*/
     }
+    <?=$modalContainerCopy;?> *, <?=$modalContainerCopy;?> ::before, <?=$modalContainerCopy;?> ::after,
     <?=$modalContainer;?> *,<?=$modalContainer;?> ::before,<?=$modalContainer;?> ::after,
     <?=$mainContainer;?> *,<?=$mainContainer;?> ::before,<?=$mainContainer;?> ::after {
         box-sizing: border-box;
     }
-
-     <?=$modalContainer;?> .dc-viewer-controller,
-     <?=$mainContainer;?> .dc-viewer-controller {
+    <?=$modalContainerCopy;?> .dc-viewer-controller,
+    <?=$modalContainer;?> .dc-viewer-controller,
+     <?=$canvasContainer;?> .dc-viewer-controller {
         position: absolute;
         top: 2rem;
         right: 2rem;
@@ -115,13 +125,13 @@ if (TL_MODE != 'BE') {
         -webkit-box-shadow: 0px 0px 8px 0px rgba(0,0,0,0.18);
         box-shadow: 0px 0px 8px 0px rgba(0,0,0,0.18);
     }
-    <?=$mainContainer;?> .row{
+    <?=$canvasContainer;?> .row{
         display: flex;
         flex-wrap: wrap;
         margin-right: -8px;
         margin-left: -8px;
     }
-    <?=$mainContainer;?> .col-12{
+    <?=$canvasContainer;?> .col-12{
         position: relative;
         width: 100%;
         padding-right: 8px;
@@ -129,7 +139,7 @@ if (TL_MODE != 'BE') {
         flex: 0 0 100%;
         max-width: 100%;
     }
-    <?=$mainContainer;?> .col-6{
+    <?=$canvasContainer;?> .col-6{
         position: relative;
         width: 50%;
         padding-right: 8px;
@@ -137,7 +147,7 @@ if (TL_MODE != 'BE') {
         flex: 0 0 50%;
         max-width: 50%;
     }
-    <?=$mainContainer;?> .col-9{
+    <?=$canvasContainer;?> .col-9{
         position: relative;
         width: 75%;
         padding-right: 8px;
@@ -145,7 +155,7 @@ if (TL_MODE != 'BE') {
         flex: 0 0 75%;
         max-width: 75%;
     }
-    <?=$mainContainer;?> .col-3{
+    <?=$canvasContainer;?> .col-3{
         position: relative;
         width: 25%;
         padding-right: 8px;
@@ -154,7 +164,7 @@ if (TL_MODE != 'BE') {
         max-width: 25%;
     }
     @media screen and (min-width: 768px) {
-        <?=$mainContainer;?> .col-md-9{
+        <?=$canvasContainer;?> .col-md-9{
 
                 position: relative;
                 width: 75%;
@@ -166,7 +176,7 @@ if (TL_MODE != 'BE') {
         }
     }
     @media screen and (min-width: 768px) {
-        <?=$mainContainer;?> .col-md-3{
+        <?=$canvasContainer;?> .col-md-3{
 
             position: relative;
             width: 25%;
@@ -176,10 +186,10 @@ if (TL_MODE != 'BE') {
             max-width: 25%;
         }
     }
-    <?=$mainContainer;?> .disabled{
+    <?=$canvasContainer;?> .disabled{
         opacity: .875;
     }
-    <?=$mainContainer;?> .dc-loading-container>{
+    <?=$canvasContainer;?> .dc-loading-container{
         display:hidden;
         position:absolute;
         left:0;
@@ -189,7 +199,7 @@ if (TL_MODE != 'BE') {
         background:rgba(255,255,255,.5);
         z-index: 9999;
     }
-    <?=$mainContainer;?> .lds-ring {
+    <?=$canvasContainer;?> .lds-ring {
         display: inline-block;
         position: absolute;
         left:50%;
@@ -198,7 +208,7 @@ if (TL_MODE != 'BE') {
         width: 80px;
         height: 80px;
     }
-    <?=$mainContainer;?> .lds-ring div {
+    <?=$canvasContainer;?> .lds-ring div {
         box-sizing: border-box;
         display: block;
         position: absolute;
@@ -210,13 +220,13 @@ if (TL_MODE != 'BE') {
         animation: lds-ring 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
         border-color: #fff transparent transparent transparent;
     }
-    <?=$mainContainer;?> .lds-ring div:nth-child(1) {
+    <?=$canvasContainer;?> .lds-ring div:nth-child(1) {
         animation-delay: -0.45s;
     }
-    <?=$mainContainer;?> .lds-ring div:nth-child(2) {
+    <?=$canvasContainer;?> .lds-ring div:nth-child(2) {
         animation-delay: -0.3s;
     }
-    <?=$mainContainer;?> .lds-ring div:nth-child(3) {
+    <?=$canvasContainer;?> .lds-ring div:nth-child(3) {
         animation-delay: -0.15s;
     }
     @keyframes lds-ring {
@@ -227,20 +237,20 @@ if (TL_MODE != 'BE') {
             transform: rotate(360deg);
         }
     }
-    <?=$mainContainer;?> .dc-icondeactivated{
+    <?=$canvasContainer;?> .dc-icondeactivated{
         display:block;
     }
-    <?=$mainContainer;?> .dc-iconactivated{
+    <?=$canvasContainer;?> .dc-iconactivated{
         display:none;
     }
-    <?=$mainContainer;?> .dc-viewer-interaction.active .dc-iconactivated{
+    <?=$canvasContainer;?> .dc-viewer-interaction.active .dc-iconactivated{
         display:block;
     }
-    <?=$mainContainer;?> .dc-viewer-interaction.active .dc-icondeactivated {
+    <?=$canvasContainer;?> .dc-viewer-interaction.active .dc-icondeactivated {
         display:none;
     }
 
-    <?=$mainContainer;?> button.play-stop-animation{
+    <?=$canvasContainer;?> button.play-stop-animation{
         display:inline-block;
         margin-right: .3rem;
         border:none;
@@ -253,7 +263,7 @@ if (TL_MODE != 'BE') {
         border-radius:50%;
         cursor: pointer;
     }
-    <?=$mainContainer;?> button.play-stop-animation:before {
+    <?=$canvasContainer;?> button.play-stop-animation:before {
         position:absolute;
         left:50%;
         top:50%;
@@ -261,17 +271,20 @@ if (TL_MODE != 'BE') {
         content:"\23F5";
         text-indent: 0;
     }
-    <?=$mainContainer;?> button.play-stop-animation.playing:before{
+    <?=$canvasContainer;?> button.play-stop-animation.playing:before{
         content:"\23F9"
     }
+    <?=$modalContainerCopy;?> .dc-canvas3d-container,
     <?=$modalContainer;?> .dc-canvas3d-container,
-    <?=$mainContainer;?> .dc-canvas3d-container{
+    <?=$canvasContainer;?> .dc-canvas3d-container{
         /*overflow: hidden;*/
         /*box-shadow: 9px 9px 42px #f0f0f0, -9px -9px 42px #fff;*/
         /*position: relative;*/
         width:100%;
         padding-top: 60%;
+      background: rgba(133,133,133,.7)
     }
+    <?=$modalContainerCopy;?> .dc-modal-image-container .dc-canvas3d-container,
     <?=$modalContainer;?> .dc-modal-image-container .dc-canvas3d-container{
         position:absolute;
         height:100%;
@@ -280,8 +293,9 @@ if (TL_MODE != 'BE') {
         left:0;
         top:0;
     }
+    <?=$modalContainerCopy;?> .dc-canvas-3d,
     <?=$modalContainer;?> .dc-canvas-3d,
-    <?=$mainContainer;?> .dc-canvas-3d{
+    <?=$canvasContainer;?> .dc-canvas-3d{
         width: 100%;
         height: 100%;
         touch-action: none;
@@ -299,7 +313,7 @@ if (TL_MODE != 'BE') {
         outline: none;
         -webkit-tap-highlight-color: rgba(255, 255, 255, 0); /* mobile webkit */
     }
-    <?=$mainContainer;?> .dc-viewer-flap{
+    <?=$canvasContainer;?> .dc-viewer-flap{
         position:absolute;
         left:0;
         top:50%;
@@ -315,16 +329,16 @@ if (TL_MODE != 'BE') {
 
 
 /*
-    <?=$mainContainer;?> #dc-showhide-all-container{
+    <?=$canvasContainer;?> #dc-showhide-all-container{
         padding-bottom:.5rem;
         margin-bottom:.5rem;
         border-bottom: 1px solid gray;
     }
     */
-
+    <?=$modalContainerCopy;?>,
     <?=$modalContainer;?> {
         position:absolute;
-        z-index: 9999;
+        z-index: 99999;
         width:100%;
         height: 100%;
         background:rgba(0,0,0,0.2);
@@ -334,6 +348,17 @@ if (TL_MODE != 'BE') {
         opacity: 0;
         transition: visibility 0s,opacity 0.5s linear;
     }
+    <?=$modalContainerCopy;?> .dc-modal-content,
+    <?=$modalContainer;?> .dc-modal-content{
+        position: relative;
+                              z-index: 2;
+      }
+    <?=$modalContainerCopy;?> .dc-modal-content h3,
+    <?=$modalContainer;?> .dc-modal-content h3{
+        padding-left:1rem;
+        margin:0;
+                          }
+    <?=$modalContainerCopy;?> .dc-modal-content-container,
     <?=$modalContainer;?> .dc-modal-content-container{
         position:fixed;
         left:50%;
@@ -343,17 +368,46 @@ if (TL_MODE != 'BE') {
         height:100%;
         z-index: 99999;
     }
+    <?=$modalContainerCopy;?> .hidden,
+    <?=$modalContainer;?> .hidden{
+           display:none !important;
+       }
+    <?=$modalContainerCopy;?> .dc-modal-content-container.fullscreen > .inner,
+      <?=$modalContainer;?> .dc-modal-content-container.fullscreen >  .inner
+      {
+        background: rgba(0,0,0,.5);
+      }
+    <?=$modalContainerCopy;?> .dc-modal-content-container.fullscreen .dc-modal-content,
+    <?=$modalContainer;?> .dc-modal-content-container.fullscreen  .dc-modal-content {
+        position: absolute;
+        z-index: 2;
+        height: 100%;
+        width: 100%;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%,-50%);
+    }
+    <?=$modalContainerCopy;?> .dc-modal-content-container.fullscreen .dc-modal-content .row,
+    <?=$modalContainer;?> .dc-modal-content-container.fullscreen  .dc-modal-content .row{
+            height:100vh;
+    }
+    <?=$modalContainerCopy;?> .dc-modal-content-container:not(.fullscreen),
     <?=$modalContainer;?> .dc-modal-content-container:not(.fullscreen){
         position:absolute;
         max-width: 1000px;
         max-height: 700px;
+      height: 100vh;
+      width: 100vh;
     }
-    <?=$modalContainer;?> .dc-modal-content-container .inner{
+    <?=$modalContainerCopy;?>  .dc-modal-content-container >.inner,
+    <?=$modalContainer;?> .dc-modal-content-container > .inner{
         background:white;
         height: 100%;
         padding: 1rem;
     }
-    <?=$modalContainer;?> .dc-btn-close{
+    <?=$modalContainerCopy;?> .dc-btn-close,
+    <?=$modalContainer;?> .dc-btn-close,
+    <?=$canvasContainer;?> .dc-btn-close{
         position:absolute;
         right:2rem;
         top:2rem;
@@ -370,24 +424,24 @@ if (TL_MODE != 'BE') {
         cursor:pointer;
         z-index: 9;
     }
+    <?=$modalContainerCopy;?> .dc-image-container,
     <?=$modalContainer;?> .dc-image-container{
-        -webkit-box-shadow: 1px 1px 4px 0px rgba(0,0,0,0.19);
-        box-shadow: 1px 1px 4px 0px rgba(0,0,0,0.19);
-        position:relative;
-        width:100%;
-        height:0;
-        padding-top: 56%;
-        overflow:hidden;
-        position:relative;
+      -webkit-box-shadow: 1px 1px 4px 0 rgb(0 0 0 / 19%);
+      box-shadow: 1px 1px 4px 0 rgba(0,0,0,.19);
+      position: relative;
+      width: calc(100% - 2rem);
+      height: 100%;
+      overflow: hidden;
+      position: absolute;
+      top: 0rem;
     }
+    <?=$modalContainerCopy;?> .dc-image-container img,
     <?=$modalContainer;?> .dc-image-container img{
-        position:absolute;
-        left:50%;
-        top:50%;
-        transform:translate(-50%,-50%);
+        object-fit: cover;
         width:100%;
         height:100%;
     }
+    <?=$modalContainerCopy;?> .dc-download,
     <?=$modalContainer;?> .dc-download{
         text-decoration: none;
         color:black;
@@ -401,11 +455,11 @@ if (TL_MODE != 'BE') {
          transform: translateX(-50%);
          bottom: 1.875rem;
     }
+    <?=$modalContainerCopy;?> .dc-download:focus, <?=$modalContainerCopy;?> .dc-download:hover, <?=$modalContainerCopy;?> .dc-download:active,
     <?=$modalContainer;?> .dc-download:focus, <?=$modalContainer;?> .dc-download:hover, <?=$modalContainer;?> .dc-download:active{
         opacity: .75;
     }
-    <?=$modalContainer;?> .dc-babylonjs-controller,
-    <?=$mainContainer;?> .dc-babylonjs-controller{
+    <?=$canvasContainer;?> .dc-babylonjs-controller{
         display:block;
         width:2rem;
         height:2rem;
@@ -418,8 +472,7 @@ if (TL_MODE != 'BE') {
         margin:.25rem;
         cursor:pointer;
     }
-    <?=$modalContainer;?> .dc-babylonjs-controller:before,
-    <?=$mainContainer;?> .dc-babylonjs-controller:before{
+    <?=$canvasContainer;?> .dc-babylonjs-controller:before{
         content:"";
         display:block;
         position:absolute;
@@ -435,56 +488,57 @@ if (TL_MODE != 'BE') {
     .dc-modal-content-container.fullscreen .dc-ctrl-fullscreen{
           display:none !important;
       }
-    <?=$modalContainer;?> .dc-ctrl-fullscreen:before,
-    <?=$mainContainer;?> .dc-ctrl-fullscreen:before{
+    <?=$canvasContainer;?> .dc-ctrl-fullscreen:before{
         content: url("data:image/svg+xml,%3C%3Fxml version='1.0' encoding='UTF-8'%3F%3E%3Csvg id='a' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 62.44 62.44'%3E%3Cpath d='M57.98,7.66l-23.56,23.56,23.56,23.56v-12.41c.09-1.39,.84-2.14,2.23-2.23,1.39,.09,2.14,.84,2.23,2.23v17.84c-.09,1.39-.84,2.14-2.23,2.23h-17.84c-1.39-.09-2.14-.84-2.23-2.23,.09-1.39,.84-2.14,2.23-2.23h12.41l-23.56-23.56L7.66,57.98h12.41c1.39,.09,2.14,.84,2.23,2.23-.09,1.39-.84,2.14-2.23,2.23H2.23c-1.39-.09-2.14-.84-2.23-2.23v-17.84c.09-1.39,.84-2.14,2.23-2.23,1.39,.09,2.14,.84,2.23,2.23v12.41L28.02,31.22,4.46,7.66v12.41c-.09,1.39-.84,2.14-2.23,2.23-1.39-.09-2.14-.84-2.23-2.23V2.23C.09,.84,.84,.09,2.23,0H20.07c1.39,.09,2.14,.84,2.23,2.23-.09,1.39-.84,2.14-2.23,2.23H7.66L31.22,28.02,54.78,4.46h-12.41c-1.39-.09-2.14-.84-2.23-2.23,.09-1.39,.84-2.14,2.23-2.23h17.84c1.39,.09,2.14,.84,2.23,2.23V20.07c-.09,1.39-.84,2.14-2.23,2.23-1.39-.09-2.14-.84-2.23-2.23V7.66Z'/%3E%3C/svg%3E");
     }
-    <?=$modalContainer;?> .dc-ctrl-reset:before,
-    <?=$mainContainer;?> .dc-ctrl-reset:before{
+    <?=$canvasContainer;?> .dc-ctrl-reset:before{
         content: url("data:image/svg+xml,%3C%3Fxml version='1.0' encoding='UTF-8'%3F%3E%3Csvg id='a' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 62.43 62.46'%3E%3Cpath d='M31.21,.02c5.85,.09,11.1,1.53,15.75,4.32,4.74,2.79,8.46,6.51,11.15,11.15,2.79,4.74,4.23,9.99,4.32,15.75-.09,5.76-1.53,11.01-4.32,15.75-2.7,4.65-6.41,8.36-11.15,11.15-4.65,2.79-9.9,4.23-15.75,4.32-4.83,0-9.39-1.07-13.66-3.21-4.28-2.04-7.95-4.97-11.01-8.78-.74-1.21-.61-2.28,.42-3.21,1.12-.74,2.18-.6,3.21,.42,2.6,3.35,5.72,5.9,9.34,7.67,3.62,1.77,7.53,2.65,11.71,2.65,7.53-.19,13.85-2.79,18.96-7.81,5.02-5.11,7.62-11.43,7.81-18.96-.19-7.53-2.79-13.85-7.81-18.96-5.11-5.02-11.43-7.62-18.96-7.81-6.41,.09-12.13,2.14-17.15,6.13,0,.09-.05,.14-.14,.14l7.67,7.81c.65,.65,.84,1.44,.56,2.37-.47,.93-1.16,1.39-2.09,1.39H2.23c-1.39-.09-2.14-.84-2.23-2.23V2.23C0,1.3,.46,.61,1.39,.14c.93-.28,1.72-.09,2.37,.56l7.11,6.97c.09-.19,.23-.32,.42-.42C17.05,2.51,23.7,.1,31.22,0V.02ZM4.45,17.86H14.63L4.45,7.68v10.18Z'/%3E%3C/svg%3E");
     }
-    <?=$modalContainer;?> .dc-ctrl-screenshot:before,
-    <?=$mainContainer;?> .dc-ctrl-screenshot:before{
+    <?=$canvasContainer;?> .dc-ctrl-screenshot:before{
         content: url("data:image/svg+xml,%3C%3Fxml version='1.0' encoding='UTF-8'%3F%3E%3Csvg id='a' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 71.37 62.44'%3E%3Cpath d='M52,8.92h10.45c2.51,.09,4.6,.98,6.27,2.65s2.55,3.76,2.65,6.27V53.52c-.09,2.51-.98,4.6-2.65,6.27s-3.76,2.55-6.27,2.65H8.92c-2.51-.09-4.6-.98-6.27-2.65S.09,56.03,0,53.52V17.84c.09-2.51,.98-4.6,2.65-6.27s3.76-2.55,6.27-2.65h10.45l1.39-4.32C21.88,1.72,24.01,.19,27.17,0h17.01c3.16,.19,5.3,1.72,6.41,4.6l1.39,4.32h.02ZM5.72,14.64c-.84,.84-1.25,1.91-1.25,3.21V53.53c0,1.3,.42,2.37,1.25,3.21s1.9,1.25,3.21,1.25H62.46c1.3,0,2.37-.42,3.21-1.25s1.25-1.9,1.25-3.21V17.85c0-1.3-.42-2.37-1.25-3.21s-1.91-1.25-3.21-1.25h-13.66l-2.37-7.39c-.37-.93-1.12-1.44-2.23-1.53H27.19c-1.12,.09-1.86,.61-2.23,1.53l-2.37,7.39H8.93c-1.3,0-2.37,.42-3.21,1.25Zm18.96,10.04c2.88-2.97,6.55-4.51,11.01-4.6,4.46,.09,8.13,1.63,11.01,4.6,2.97,2.88,4.51,6.55,4.6,11.01-.09,4.46-1.63,8.13-4.6,11.01-2.88,2.98-6.55,4.51-11.01,4.6-4.46-.09-8.13-1.62-11.01-4.6-2.98-2.88-4.51-6.55-4.6-11.01,.09-4.46,1.62-8.13,4.6-11.01Zm3.07,3.07c-2.05,2.14-3.11,4.79-3.21,7.95,.09,3.16,1.16,5.81,3.21,7.95,2.14,2.05,4.79,3.11,7.95,3.21,3.16-.09,5.81-1.16,7.95-3.21,2.04-2.14,3.11-4.79,3.21-7.95-.09-3.16-1.16-5.81-3.21-7.95-2.14-2.04-4.79-3.11-7.95-3.21-3.16,.09-5.81,1.16-7.95,3.21Z'/%3E%3C/svg%3E");
     }
 
-    <?=$mainContainer;?> .dc-babylonjs-controller-container{
+    <?=$canvasContainer;?> .dc-babylonjs-controller-container{
         position:absolute;
         left:1rem;
         top:1rem;
     }
-    <?=$mainContainer;?> .controller-container-right{
+    <?=$canvasContainer;?> .controller-container-right{
         left:auto;
         right:1rem;
     }
-    <?=$mainContainer;?> .swiper {
+    <?=$canvasContainer;?> .dc-swiper {
         width: 100%;
         height: 250px;
     }
-    <?=$mainContainer;?> .swiper-slide{
+    <?=$canvasContainer;?> .swiper-slide{
         background:none;
-        cursor: default;
+        cursor: pointer;
     }
 
 
-    <?=$mainContainer;?> .swiper-slide-active{
+    <?=$canvasContainer;?> .swiper-slide-active{
         /*background:#E8E8E8;*/
         cursor: pointer;
     }
-    <?=$mainContainer;?> .dc-scroll-container {
+    <?=$canvasContainer;?> .dc-scroll-container {
          position:absolute;
          top:50%;
          transform: translateY(-50%);
          left: 1rem;
          width: calc(100% - 2.5rem);
-         height: 290px;
+         height: 250px;
          z-index: 9;
      }
-    <?=$mainContainer;?> .dc-scroll-container > label{
+    <?=$canvasContainer;?> .dc-scroll-container > label{
         color:white;
-        padding-left:1rem;padding-bottom:.5rem;
+        padding-left:1rem;
+                             padding-bottom:.5rem;
+        margin-top:-2rem;
+                             position: relative;
          }
-    <?=$mainContainer;?> .dc-scroll-container > .inner{
+
+    <?=$canvasContainer;?> .dc-scroll-container > .inner{
         position:absolute;
         top:50%;
         transform: translateY(-50%);
@@ -496,7 +550,7 @@ if (TL_MODE != 'BE') {
         overflow: hidden;
         background:white;
     }
-    <?=$mainContainer;?> .dc-scroll-container > .inner:before{
+    <?=$canvasContainer;?> .dc-scroll-container > .inner:before{
         content:'';
         pointer-events: none;
         background: rgb(255,255,255);
@@ -508,7 +562,7 @@ if (TL_MODE != 'BE') {
         height:100%;
         z-index:15;
     }
-    <?=$mainContainer;?> .dc-scroll-container > .inner:after{
+    <?=$canvasContainer;?> .dc-scroll-container > .inner:after{
         content:'';
         pointer-events: none;
         position: absolute;
@@ -520,12 +574,12 @@ if (TL_MODE != 'BE') {
         z-index: -1;
         background:#E8E8E8;
     }
-    <?=$mainContainer;?> .dc-checkbox-container,
-    <?=$mainContainer;?> .dc-checkbox-container label,
-    <?=$mainContainer;?> .dc-checkbox-container input{
+    <?=$canvasContainer;?> .dc-checkbox-container,
+    <?=$canvasContainer;?> .dc-checkbox-container label,
+    <?=$canvasContainer;?> .dc-checkbox-container input{
         cursor:pointer
     }
-    <?=$mainContainer;?> .dc-checkbox-container label{
+    <?=$canvasContainer;?> .dc-checkbox-container label{
         display: block;
         position: absolute;
         left: 0;
@@ -534,8 +588,8 @@ if (TL_MODE != 'BE') {
         height: 100%;
     }
 
-    <?=$mainContainer;?> .dc-selected,
-    <?=$mainContainer;?> .dc-checkbox-container{
+    <?=$canvasContainer;?> .dc-selected,
+    <?=$canvasContainer;?> .dc-checkbox-container{
         background: #fff;
         color: #000;
         height: 43px;
@@ -546,23 +600,23 @@ if (TL_MODE != 'BE') {
         margin-bottom: 1rem;
         cursor:pointer;
     }
-    <?=$mainContainer;?> .dc-headline-container{
+    <?=$canvasContainer;?> .dc-headline-container{
         display: none;
     }
-    <?=$mainContainer;?> .dc-selected:hover,
-    <?=$mainContainer;?> .dc-checkbox-container:hover{
+    <?=$canvasContainer;?> .dc-selected:hover,
+    <?=$canvasContainer;?> .dc-checkbox-container:hover{
         -webkit-box-shadow: 0px 0px 10px 5px rgb(0 0 0 / 20%);
         box-shadow: 0px 0px 10px 5px rgb(0 0 0 / 20%);
     }
-    <?=$mainContainer;?> .dc-selected .inner,
-    <?=$mainContainer;?> .swiper-slide .inner{
+    <?=$canvasContainer;?> .dc-selected .inner,
+    <?=$canvasContainer;?> .swiper-slide .inner{
         position:absolute;
         padding-left:3rem;
         top:50%;
         transform:translateY(-50%);
     }
-    <?=$mainContainer;?> .type-shine:after,
-    <?=$mainContainer;?> .type-chrome:after{
+    <?=$canvasContainer;?> .type-shine:after,
+    <?=$canvasContainer;?> .type-chrome:after{
         content:"";
         position: absolute;
         width:100%;
@@ -573,31 +627,27 @@ if (TL_MODE != 'BE') {
         background: linear-gradient(37deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.2049194677871149) 10%, rgba(255,255,255,0) 37%, rgba(255,255,255,0.6334908963585435) 60%, rgba(255,255,255,0) 85%);
 
     }
-    <?=$mainContainer;?> .type-chrome:after{
+    <?=$canvasContainer;?> .type-chrome:after{
         background: rgb(255,255,255);
         background: linear-gradient(37deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.46262254901960786) 35%, rgba(255,255,255,0) 55%, rgba(255,255,255,0.6334908963585435) 75%, rgba(255,255,255,0) 85%);
     }
-    <?=$mainContainer;?> .dc-canvas-gui {
+    <?=$canvasContainer;?> .dc-canvas-gui {
         width: calc(100% - 1rem);
         padding-left: 0.5rem;
     }
-    <?=$mainContainer;?> .dc-scroll-main-container,
-    <?=$mainContainer;?> .dc-checkbox-container{
-        /*position:relative;*/
-    }
-    <?=$mainContainer;?> .hidden{
+    <?=$canvasContainer;?> .hidden{
         display:none !important;
     }
-    <?=$mainContainer;?> .dc-sidebar{
-
+    <?=$canvasContainer;?> .dc-sidebar{
+                             background: white;
     }
-    <?=$mainContainer;?> .dc-sidebar.open-select{
+    <?=$canvasContainer;?> .dc-sidebar.open-select{
     }
-    <?=$mainContainer;?> .dc-sidebar .dc-sidebar-overlay {
+    <?=$canvasContainer;?> .dc-sidebar .dc-sidebar-overlay {
         display:none;
     }
-    <?=$mainContainer;?> .dc-sidebar.open-select .dc-sidebar-overlay,
-    <?=$mainContainer;?> .dc-sidebar-info-text
+    <?=$canvasContainer;?> .dc-sidebar.open-select .dc-sidebar-overlay,
+    <?=$canvasContainer;?> .dc-sidebar-info-text
     {
         background: rgba(0,0,0,0.7);
         display:block;
@@ -608,7 +658,7 @@ if (TL_MODE != 'BE') {
         height: 100%;
         z-index: 8;
     }
-    <?=$mainContainer;?> .dc-sidebar-info-text .inner{
+    <?=$canvasContainer;?> .dc-sidebar-info-text .inner{
         position: absolute;
         width: 80%;
         height:80%;
@@ -618,11 +668,18 @@ if (TL_MODE != 'BE') {
         background:white;
         padding:1rem;
     }
-    <?=$mainContainer;?> label{
+    <?=$canvasContainer;?> .dc-sidebar-info-text .inner .text-container {
+                             position: absolute;
+                             width: 90%;
+                             height: 80%;
+                             overflow: auto;
+                             top: 10%;
+                         }
+    <?=$canvasContainer;?> label{
         margin-bottom:.5rem;
         display: block;
     }
-    <?=$mainContainer;?> .dc-swiper-symbol {
+    <?=$canvasContainer;?> .dc-swiper-symbol {
         position: absolute;
         left: 0.5rem;
         top: 50%;
@@ -634,16 +691,14 @@ if (TL_MODE != 'BE') {
         overflow: hidden;
         padding: 0;
     }
-    <?=$mainContainer;?> .dc-swiper-symbol .inner{
+    <?=$canvasContainer;?> .dc-swiper-symbol .inner{
         width:100%;
         height:100%;
         left:0;
         top:50%;
         position:absolute;
     }
-
-     <?=$modalContainer;?> .dc-babylonjs-legend-controll,
-    <?=$mainContainer;?> .dc-babylonjs-legend-controll{
+    <?=$canvasContainer;?> .dc-babylonjs-legend-controll{
         position:absolute;
         z-index: 2;
         left:50%;
@@ -651,35 +706,17 @@ if (TL_MODE != 'BE') {
         bottom: 2rem;
         pointer-events: none;
     }
-    <?=$modalContainer;?> .dc-babylonjs-legend-controll img,
-    <?=$mainContainer;?> .dc-babylonjs-legend-controll img{
+    <?=$canvasContainer;?> .dc-babylonjs-legend-controll img{
         max-width: 88px;
     }
-    @media screen and (max-width: 768px) {
-        <?=$mainContainer;?> .desktop {
-            display:none;
-        }
 
-        <?=$mainContainer;?> .mobile {
-            display:block;
-        }
-    }
-    @media screen and (min-width: 769px) {
-        <?=$mainContainer;?> .desktop {
-            display:block;
-        }
-
-        <?=$mainContainer;?> .mobile {
-            display:none;
-        }
-    }
-    <?=$mainContainer;?> .dc-checkbox-container{
+    <?=$canvasContainer;?> .dc-checkbox-container{
         height: 50px;
         vertical-align: middle;
         position:relative;
         cursor: pointer;
     }
-    <?=$mainContainer;?> .dc-checkbox-container span{
+    <?=$canvasContainer;?> .dc-checkbox-container span{
         position:absolute;
         top:50%;
         transform:translateY(-50%);
@@ -687,22 +724,22 @@ if (TL_MODE != 'BE') {
         padding-left:3rem;
         width:100%;
     }
-    <?=$mainContainer;?> .dc-checkbox-container.checked .unchecked-image{
+    <?=$canvasContainer;?> .dc-checkbox-container.checked .unchecked-image{
         display:none;
     }
-    <?=$mainContainer;?> .dc-checkbox-container.checked .checked-image{
+    <?=$canvasContainer;?> .dc-checkbox-container.checked .checked-image{
         display:block;
     }
-    <?=$mainContainer;?> .dc-checkbox-container.unchecked .checked-image{
+    <?=$canvasContainer;?> .dc-checkbox-container.unchecked .checked-image{
         display:none;
     }
-    <?=$mainContainer;?> .dc-checkbox-container.unchecked .unchecked-image{
+    <?=$canvasContainer;?> .dc-checkbox-container.unchecked .unchecked-image{
         display:block;
     }
-    <?=$mainContainer;?> .dc-checkbox-container input{
+    <?=$canvasContainer;?> .dc-checkbox-container input{
         display:none;
     }
-    <?=$mainContainer;?> .dc-checkbox-container .dc-image-container{
+    <?=$canvasContainer;?> .dc-checkbox-container .dc-image-container{
         position:absolute;
         top:50%;
         transform:translateY(-50%);
@@ -712,7 +749,7 @@ if (TL_MODE != 'BE') {
         overflow: hidden;
         border-radius: 50%;
     }
-    <?=$mainContainer;?> .dc-checkbox-container .dc-image-container img{
+    <?=$canvasContainer;?> .dc-checkbox-container .dc-image-container img{
         position:absolute;
         width:100%;
         height: auto;
@@ -720,46 +757,105 @@ if (TL_MODE != 'BE') {
         top:50%;
         transform:translate(-50%,-50%);
     }
-    <?=$mainContainer;?> .dc-btn-close.close-dc-select {
+    <?=$canvasContainer;?> .dc-btn-close.close-dc-select {
         top: -8px !important;
         background: none !important;
         color: white !important;
         right: 1rem !important;
+                             -webkit-box-shadow: none !important;
+                             box-shadow: none !important;
     }
+    <?=$modalContainerCopy;?>.fadeIn,
     <?=$modalContainer;?>.fadeIn {
         visibility: visible;
         opacity: 1;
         transition: visibility 0s, opacity 0.5s linear;
     }
+    <?=$modalContainerCopy;?> .dc-modal-content.modal-added,
+    <?=$modalContainer;?> .dc-modal-content.modal-added
+    <?=$mainContainer;?> .dc-modal-content.modal-added{
+        z-index: 10012 !important;
+    }
     .dc-modal-active{
         overflow: hidden;
+    }
+    <?=$canvasContainer;?>  .dc-sidebar-gui-scroll-container{
+                              padding: 1rem;
+                              overflow: auto;
+                              max-height: 100%;
+                              display: block;
+                              width: calc(100% - 1rem);
+                          }
+
+    @media screen and (max-width: 768px) {
+    <?=$canvasContainer;?> .dc-scroll-container > label{
+        color: #fff;
+        margin-top: -3rem;
+        position: relative;
+        background: rgba(0,0,0,.5);
+        padding: 1rem;
+        border-radius: 15px;
+        height: 130%;
+    }
+    <?=$canvasContainer;?> .dc-btn-close.close-dc-select {
+            top: 8px !important;
+        }
+        <?=$canvasContainer;?> .desktop {
+            display:none;
+        }
+
+        <?=$canvasContainer;?> .mobile {
+             display:block;
+         }
+          <?=$canvasContainer;?> .dc-babylonjs-legend-controll img{
+              max-width: 50px;
+          }
+          <?=$canvasContainer;?> .dc-canvas3d-container{
+              /*overflow: hidden;*/
+              /*box-shadow: 9px 9px 42px #f0f0f0, -9px -9px 42px #fff;*/
+              /*position: relative;*/
+              width:100%;
+              padding-top: 120%;
+          }
+        <?=$canvasContainer;?>  .dc-sidebar-gui-scroll-container{
+
+              max-height: 40vh;
+      }
+    }
+    @media screen and (min-width: 769px) {
+        <?=$canvasContainer;?> .desktop {
+            display:block;
+        }
+
+        <?=$canvasContainer;?> .mobile {
+             display:none;
+         }
     }
 
 </style>
 <div id="<?=str_replace('#','',$mainContainer);?>">
-    <div id="<?=str_replace('#','',$modalContainer);?>" class=" dc-modal">
-        <div class="dc-modal-content-container">
-            <div class="inner">
-                <a class="dc-btn-close">
-                    &#10006;
-                </a>
-                <div class="dc-modal-content">
 
-                </div>
-                <div class="dc-modal-image-container">
-                    <div class="dc-image-container">
-                        <img class="dc-renderimage" src=""/>
-                    </div>
-                    <a class="dc-download">Download</a>
-                </div>
-            </div>
-        </div>
-    </div>
+<!--    <div id="--><?//=str_replace('#','',$modalContainer);?><!--" class=" dc-modal">-->
+<!--        <div class="dc-modal-content-container">-->
+<!--            <div class="inner">-->
+<!--                <a class="dc-btn-close">-->
+<!--                    &#10006;-->
+<!--                </a>-->
+<!--                <div class="dc-modal-content">-->
+<!---->
+<!--                </div>-->
+<!--                <div class="dc-modal-image-container">-->
+<!--                    <div class="dc-image-container">-->
+<!--                        <img class="dc-renderimage" src=""/>-->
+<!--                    </div>-->
+<!--                    <a class="dc-download">Download</a>-->
+<!--                </div>-->
+<!--            </div>-->
+<!--        </div>-->
+<!--    </div>-->
 
-    <div class="dc-canvas-container">
-        <div class="dc-loading-container">
-            <div class="lds-ring"><div></div><div></div><div></div><div></div></div>
-        </div>
+    <div id="<?=str_replace('#','',$canvasContainer);?>">
+
         <?php if($enableInteractButton){ ?>
         <div class="dc-viewer-controller">
             <a class="dc-viewer-interaction">
@@ -772,7 +868,11 @@ if (TL_MODE != 'BE') {
             <div class="col-12 paste-dc-canvas-container <?php if($enableGuiVisibility || $enableGuiAnimations || $enableGuiSelect){ echo "col-md-9"; }?>">
                 <div class="dc-viewer-flap"></div>
                 <div class="dc-canvas3d-container">
-                    <canvas class="dc-canvas-3d" style="width:100%;height:100%;"></canvas>
+                    <div class="dc-loading-container">
+                        <div class="lds-ring"><div></div><div></div><div></div><div></div></div>
+                    </div>
+
+                    <canvas class="dc-canvas-3d" style="width:100%;height:100%;"  touch-action="none"></canvas>
 
                     <div class="dc-babylonjs-controller-container controller-container-left">
                         <a class="dc-babylonjs-controller dc-ctrl-screenshot" title="take screenshot">take screenshot</a>
@@ -788,15 +888,20 @@ if (TL_MODE != 'BE') {
                 </div>
             </div>
             <div class="col-12 dc-sidebar <?php if($enableGuiVisibility || $enableGuiAnimations || $enableGuiSelect){ echo "col-md-3"; }?>">
+
                 <div class="dc-sidebar-overlay"></div>
                 <div class="dc-sidebar-info-text hidden">
-                    <a class="dc-btn-close">
-                        &#10006;
-                    </a>
+
                     <div class="inner">
+                        <a class="dc-btn-close">
+                            &#10006;
+                        </a>
+                        <div class="text-container">
+
+                        </div>
                     </div>
                 </div>
-                <div class="dc-canvas-gui">
+                <div class="dc-sidebar-gui-scroll-container">
                     <?php /*if($enableGuiVisibility){?>
                         <div class="container-checkbox">
                             <h3 class="headline">
@@ -815,7 +920,7 @@ if (TL_MODE != 'BE') {
                             </div>
                         </div>
                     <?php } ?>
-                    <?php /*if($enableGuiSelect){?>
+                    <?php if($enableGuiSelect){?>
                         <div class="dc-container-select-boxes">
 
                             <?php if( $this->headline){ ?>
@@ -824,7 +929,7 @@ if (TL_MODE != 'BE') {
                             <div class="select-container checkbox-container">
                             </div>
                         </div>
-                    <?php }*/ ?>
+                    <?php } ?>
                 </div>
             </div>
         </div>
@@ -874,30 +979,7 @@ if (TL_MODE != 'BE') {
                 viewer.loadingStarted = (canvasId) =>{
 
                 }
-                /*****
-                 *
-                 * @type {HTMLElement}
-                 */
-                // Begin setup
 
-
-
-// End setup
-
-                /*****
-                 *
-                 * @type {HTMLElement}
-                 */
-
-                window.addEventListener('mousedown', function(e){
-                    if (!e.target.className.toString().includes('dc-selected')
-                        && !e.target.className.toString().includes('dc-scroll-container')
-                        && !e.target.className.toString().includes('swiper-slide')){
-                        Array.from(document.querySelectorAll('.dc-scroll-container')).forEach(x=>x.classList.add('hidden'));
-                        Array.from(document.querySelectorAll('.dc-sidebar')).forEach(x=>x.classList.remove('open-select'));
-
-                    }
-                });
                 return {viewer, DSB};
             });
 
@@ -910,6 +992,11 @@ if (TL_MODE != 'BE') {
             const viewer = viewerDSB.viewer;
             const DSB = viewerDSB.DSB;
             const mainContainer = document.querySelector('<?=$mainContainer;?>');
+            const canvasContainer = document.querySelector('<?=$canvasContainer;?>');
+
+
+
+
             let cameraSettings = {
 <?php for($i = 0; $i < count($settings); $i++){
   if(count($settings[$i]) && array_search($settings[$i][0], $cameraSettings) !== false){ ?>
@@ -930,9 +1017,46 @@ if(count($settings[$i]) && array_search($settings[$i][0], $environmentSettings) 
             function highlightObject(parameters) {
             }
             let highlightcolor = <?= $highlightColor; ?>;
-            let scene = viewer.addScene(mainContainer.querySelector('.dc-canvas-3d'),"<?=$mainContainer?>", loadAssetPaths,cameraSettings,environmentSettings,true <?php if($activateMeshSelection){ ?>, {callback: highlightObject, selectionOutlineColor: highlightcolor <?php if($zoomSelectedMesh){ ?> ,zoomSelectedMesh:false<?php } ?> }<?php }else{ ?>, {} <?php } ?>);
+            let scene = viewer.addScene(canvasContainer.querySelector('.dc-canvas-3d'),"<?=$canvasContainer?>", loadAssetPaths,cameraSettings,environmentSettings,false <?php if($activateMeshSelection){ ?>, {callback: highlightObject, selectionOutlineColor: highlightcolor <?php if($zoomSelectedMesh){ ?> ,zoomSelectedMesh:false<?php } ?> }<?php }else{ ?>, {} <?php } ?>, <?=(($sceneEnvironmentTextur)?"'".$sceneEnvironmentTextur."'":'')?>);
+
+            window.addEventListener('mousedown', (e) => {
+                if (e.target.closest('<?=$mainContainer;?>')
+                    && (
+                        !e.target.className.toString().includes('dc-selected')
+                        && !e.target.className.toString().includes('dc-scroll-container')
+                        && !e.target.className.toString().includes('swiper-slide')
+                        && !e.target.closest('.swiper-slide')
+                        && !e.target.closest('.dc-scroll-container')
+                        && !e.target.closest('.dc-selected')
+                    )
+                ){
+                    Array.from(canvasContainer.querySelectorAll('.dc-scroll-container')).forEach(x=>x.classList.add('hidden'));
+                    Array.from(canvasContainer.querySelectorAll('.dc-sidebar')).forEach(x=>x.classList.remove('open-select'));
+                    scene.deactivateInfoPoints();
+
+                }
+            });
+
                 scene.loadingFinished.then(()=>{
-                    console.log(scene);
+
+                    if(scene.scene.cameras.length > 1){
+                        scene.scene.switchActiveCamera(scene.scene.cameras[0]);
+
+                        // scene.scene.switchActiveCamera(scene.scene.cameras[0]);
+                        // scene.scene.animationGroups.filter(x=>x.name.includes('camera_')).forEach(aniGroup => {
+                        //
+                        //     aniGroup.targetedAnimations.forEach(tarAni => {
+                        //         // aniGroup.addTargetedAnimation(tarAni.animation, scene.scene.activeCamera);
+                        //         tarAni.target = scene.scene.activeCamera;
+                        //     })
+                        // });
+                        // var aniGroup = scene.scene.animationGroups[1];
+                        //
+                        // aniGroup.addTargetedAnimation(aniGroup.targetedAnimations[0].animation, scene.scene.activeCamera);
+                        // aniGroup.addTargetedAnimation(aniGroup.targetedAnimations[1].animation, scene.scene.activeCamera);
+                        // aniGroup.addTargetedAnimation(aniGroup.targetedAnimations[2].animation, scene.scene.activeCamera);
+                        console.log(scene, scene.scene.activeCamera);
+                    }
                     <?php if( $blackList){ ?>
                     var blackListString = "<?= $blackList ?>";
                     var blackListArray = blackListString.split(',');
@@ -959,8 +1083,8 @@ if(count($settings[$i]) && array_search($settings[$i][0], $environmentSettings) 
                     scene.whitelist = [...new Set([...whiteListArray,...["__root__"]])];
                     <?php } ?>
 
-                    scene.engine.resize();
-                    var loadingContainer = mainContainer.querySelector('.dc-loading-container');
+
+                    var loadingContainer = canvasContainer.querySelector('.dc-loading-container');
                     loadingContainer.classList.add('hidden');
 
 
@@ -982,16 +1106,31 @@ if(count($settings[$i]) && array_search($settings[$i][0], $environmentSettings) 
                         for(var i = 0; i< options.length; i++){
                             var containerId = "select-container";
                             let selectId = "e"+i;
-                            scene.addGui(mainContainer.querySelector('.dc-sidebar'), selectId, DSB.DC_GUI_TYPE.CustomElements, options[i], (swiperId)=>{
+                            scene.addGui(canvasContainer.querySelector('.dc-sidebar-gui-scroll-container'), selectId, DSB.DC_GUI_TYPE.CustomElements, options[i], (swiperId)=>{
+                                var elem = canvasContainer.querySelector('.dc-sidebar-info-text');
+                                elem.classList.add("hidden");
+
+                                var controllerType = swiperId.getAttribute('dc-controll-type');
+                                var controllerId =swiperId.getAttribute('dc-controll-id');
                                 if(swiperId.className.includes('checkbox')){
+                                    if(swiperId.className.includes('unchecked')){
+
+                                        scene.deactivateInfoPoints();
+                                    }else{
+                                        scene.activateInfoPoints(controllerType, controllerId);
+                                    }
                                 }else{
                                     initSwiperSlider(swiperId);
-                                    mainContainer.querySelector('.dc-sidebar').classList.add('open-select');
+                                    canvasContainer.querySelector('.dc-sidebar').classList.add('open-select');
+
+                                    scene.activateInfoPoints(controllerType, controllerId);
                                 }
+
+
                             });
-                            var element = mainContainer.querySelector('.dc-scroll-main-container-'+selectId+' .swiper-slide');
+                            var element = canvasContainer.querySelector('.dc-scroll-main-container-'+selectId+' .swiper-slide');
                             if(element){
-                                var elementSelected = mainContainer.querySelector('.dc-scroll-main-container-'+selectId+' .dc-selected');
+                                var elementSelected = canvasContainer.querySelector('.dc-scroll-main-container-'+selectId+' .dc-selected');
 
                                 if(element && elementSelected) {
                                     elementSelected.innerHTML = element.innerHTML;
@@ -1000,18 +1139,32 @@ if(count($settings[$i]) && array_search($settings[$i][0], $environmentSettings) 
                         }
                     }
                     <?php } ?>
-                    <?php /*if($enableGuiAnimations){?>
-                    scene.addGui("animation-container",<?=$this->id;?>,'',  1, '' );
+                    <?php if($enableGuiAnimations){?>
+                    var optionsAnimation = {
+                        animationGroup : [
+                            {
+                                cameraName : "camera_step1",
+                                animationGroups : ['chargingCard_slideIn', 'camera_step1']
+                            },
+                            {
+                                cameraName : 'camera_step2',
+                                animationGroups : ['chargingHatch_open','chargingCable_plugIn', 'camera_step2']
+                            },
+                         ]
+
+                    };
+                    scene.addGui(canvasContainer.querySelector(".animation-container"),<?=$this->id;?>,DSB.DC_GUI_TYPE.AnimationElements, optionsAnimation);
                     //var gui = new DSB.DCGui(viewer, "animation-container-<?//=$this->id;?>//",<?//=$this->id;?>//,  DSB.DCGuiModel.AnimationElements );
-                    <?php } */?>
+                    <?php } ?>
 
-
-
+                    scene.scene.meshes[0].material =scene.scene.meshes[1].material;
+                    scene.engine.resize();
                 });
                 scene.loadingStarted.then(()=>{
-                    var loadingContainer = mainContainer.querySelector('.dc-loading-container');
+                    var loadingContainer = canvasContainer.querySelector('.dc-loading-container');
                     loadingContainer.classList.remove('hidden');
                 });
+
 
             var addInfopoints = () => {
                 var focusImagePath = [
@@ -1032,11 +1185,11 @@ if(count($settings[$i]) && array_search($settings[$i][0], $environmentSettings) 
                         meshNamePattern: "dc-helper-ear"
                     },
                     {
-                        imagePath:"./bundles/contaobabylonjsviewer/images/polymode__icon-circle-microphone.png",
+                        imagePath:"./bundles/contaobabylonjsviewer/images/polymode__icons_icon-circle-eye.png",
                         meshNamePattern: "dc-helper-zoom-visibility"
                     },
                     {
-                        imagePath:"./bundles/contaobabylonjsviewer/images/polymode__icon-circle-microphone.png",
+                        imagePath:"./bundles/contaobabylonjsviewer/images/polymode__icons_icon-circle-eye.png",
                         meshNamePattern: "dc-helper-visibility"
                     },
                     {
@@ -1065,7 +1218,10 @@ if(count($settings[$i]) && array_search($settings[$i][0], $environmentSettings) 
                 scene.clickedInfopoint = (returnObject) => {
                     var attrName = returnObject.targetMeshId;
                     if(returnObject.type.includes(DSB.DC_INFOPOINTS_TYPE.visibility)){
-                        var visibilityElement = mainContainer.querySelector('[dc-controll-type="visibility"][dc-controll-id="akku"] .dc-checkbox-container');
+
+
+
+                        var visibilityElement = canvasContainer.querySelector('[dc-controll-type="visibility"][dc-controll-id="'+attrName+'"] .dc-checkbox-container');
                         var inputElement = visibilityElement.querySelector('input');
                         if(visibilityElement.className.includes('unchecked')){
                             visibilityElement.classList.remove('unchecked');
@@ -1076,23 +1232,40 @@ if(count($settings[$i]) && array_search($settings[$i][0], $environmentSettings) 
                             visibilityElement.classList.add('unchecked');
                             inputElement.checked = false;
                         }
+                        if(!scene.scene.getMeshById(attrName)){
+                            var checkVisibilityObjects = canvasContainer.querySelector('[dc-controll-type="visibility"][dc-controll-id="'+attrName+'"] .dc-checkbox-container input');
+                            var meshes = checkVisibilityObjects.getAttribute('dc-target')?.split(',');
+                            if(typeof meshes !== 'undefined' && meshes.length){
+                                meshes.forEach(meshName => {
+                                    scene.scene.getMeshById(meshName).isVisible = inputElement.checked;
+                                })
+                            }
+                        }
 
 
                     }
                     if(attrName && returnObject.type.includes(DSB.DC_INFOPOINTS_TYPE.color)){
+                        var elem = canvasContainer.querySelector('.dc-sidebar-info-text');
+                        elem.classList.add("hidden");
                         if(scene.gui){
                             scene.gui.openGuiSlider(attrName, "color", (swiperId)=>{
 
                                 initSwiperSlider(swiperId);
-                                mainContainer.querySelector('.dc-sidebar').classList.add('open-select');
+                                canvasContainer.querySelector('.dc-sidebar').classList.add('open-select');
                             });
                         }
                     }
                     if(returnObject.type.includes(DSB.DC_INFOPOINTS_TYPE.info)){
                         if(typeof returnObject.targetMeshId !== 'undefined' && returnObject.targetMeshId ){
-                            var elem = mainContainer.querySelector('.dc-sidebar-info-text');
-                            var textContainer = mainContainer.querySelector('.dc-sidebar-info-text .inner');
-                            textContainer.innerHTML = info[0].text;
+                            Array.from(canvasContainer.querySelectorAll('.dc-scroll-container')).forEach(x=>x.classList.add('hidden'));
+                            Array.from(canvasContainer.querySelectorAll('.dc-sidebar')).forEach(x=>x.classList.remove('open-select'));
+
+                            var elem = canvasContainer.querySelector('.dc-sidebar-info-text');
+                            var textContainer = canvasContainer.querySelector('.dc-sidebar-info-text .inner .text-container');
+                            var findInfoText = info.find(x=>x.id == returnObject.targetMeshId);
+                            if(typeof findInfoText !== 'undefined' && typeof findInfoText.text !== 'undefined'){
+                                textContainer.innerHTML = findInfoText.text;
+                            }
                             elem.classList.remove("hidden");
                         }
 
@@ -1101,8 +1274,7 @@ if(count($settings[$i]) && array_search($settings[$i][0], $environmentSettings) 
 
                 };
             }
-
-            var resetButton = mainContainer.querySelector('.dc-ctrl-reset');
+            var resetButton = canvasContainer.querySelector('.dc-ctrl-reset');
             resetButton.addEventListener('click', async function (event) {
 
                 event.preventDefault();
@@ -1115,108 +1287,103 @@ if(count($settings[$i]) && array_search($settings[$i][0], $environmentSettings) 
                 // setTimeout(addInfopoints, 300);
                 // // addInfopoints();
             });
-            var screenshotButton = mainContainer.querySelector('.dc-ctrl-screenshot');
+            var screenshotButton = canvasContainer.querySelector('.dc-ctrl-screenshot');
             screenshotButton.addEventListener('click', async function (event) {
                 event.preventDefault();
-                var imageSrc = await scene.takeScreenshot({width: '1280', height: '720'});
-                var image = mainContainer.querySelector('.dc-renderimage');
-                image.src = imageSrc;
-                var downloadbutton = mainContainer.querySelector('.dc-download');
-                downloadbutton.href = imageSrc;
-                downloadbutton.download = 'screenshot.png';
-                fadeModalIn("Screenshot");
+                // scene,id, headline,fullscreen, takeScreenshot, copyElement,copyElementContainer, copyToContainer,screenshotWidth,screenshotHeight
+                viewer.createModal(scene,"<?=str_replace('#','',$modalContainerCopy);?>","Screenshot",false,true,null,null,canvasContainer.parentNode);
+            //     var imageSrc = await scene.takeScreenshot({width: '1280', height: '720'});
+            //     var image = canvasContainer.querySelector('.dc-renderimage');
+            //     image.src = imageSrc;
+            //     var downloadbutton = canvasContainer.querySelector('.dc-download');
+            //     downloadbutton.href = imageSrc;
+            //     downloadbutton.download = 'screenshot.png';
+            //     fadeModalIn("Screenshot");
             });
-            var modal = document.querySelector('<?=$modalContainer?>');
-            var body = document.querySelector('body');
-            var fullscreenButton = mainContainer.querySelector('.dc-ctrl-fullscreen');
+            //var modal = document.querySelector('<?//=$modalContainer?>//');
+            //var body = document.querySelector('body');
+            //var canvasContainer = document.querySelector('<?//=$canvasContainer;?>//');
+            var fullscreenButton = canvasContainer.querySelector('.dc-ctrl-fullscreen');
             if(fullscreenButton){
+                // scene,id, headline,fullscreen, takeScreenshot, copyElement,copyElementContainer, copyToContainer,screenshotWidth,screenshotHeight
+                //viewer.createModal(scene,"<?//=str_replace('#','',$modalContainer);?>//-fullscreen","",true,false,canvasContainer,mainContainer);
                 fullscreenButton.addEventListener('click', (event) => {
                     event.preventDefault();
-                    var modalContentContainer = mainContainer.querySelector('.dc-modal-content-container');
-                    modalContentContainer.classList.add('fullscreen');
-                    var canvasContainer = mainContainer.querySelector('.dc-canvas3d-container');
-                    var fullscreenContentContainer = mainContainer.querySelector('.dc-modal-image-container');
-                    if(canvasContainer && fullscreenContentContainer){
-                        fullscreenContentContainer.appendChild(canvasContainer);
-                        setTimeout(()=>{viewer.resize();},40);
-                    }
-                    fadeModalIn("",true,(isVisible)=>{});
-                    body.prepend(modal);
-                    body.classList.add('dc-modal-active');
-                    scene.infopointsToggleVisibility(false);
-                    scene.isFullscreen = true;
-                });
-            }
-            var closeButton = document.querySelector('<?=$modalContainer;?> .dc-btn-close');
-            if(closeButton){
-                closeButton.addEventListener('click',  (event) =>{
-                    event.preventDefault();
-                    var canvasContainerFullscreen = modal.querySelector('.dc-modal-image-container .dc-canvas3d-container');
-                    fadeModalIn("", false);
-                    var modalContentContainer = modal.querySelector('.dc-modal-content-container');
-                    modalContentContainer.classList.remove('fullscreen');
-
-                    var canvasContainerOrig = mainContainer.querySelector('.paste-dc-canvas-container');
-                    if(canvasContainerFullscreen && canvasContainerOrig){
-                        canvasContainerOrig.appendChild(canvasContainerFullscreen);
-                        setTimeout(()=>{viewer.resize();},40);
-                    }
-                    mainContainer.prepend(modal);
-                    body.classList.remove('dc-modal-active');
-                    scene.infopointsToggleVisibility(true);
-                    scene.isFullscreen = false;
-                });
-            }
-            var closeSelectButton = Array.from(mainContainer.querySelectorAll('.close-dc-select'));
-            if(closeSelectButton && closeSelectButton.length){
-                closeSelectButton.forEach((button) => {
-                    closeSelectButton.addEventListener('click', function (event) {
-                        event.preventDefault();
-
-                        button.closest('dc-scroll-container').classList.add('hidden');
-                        mainContainer.querySelectorAll('.dc-sidebar').classList.remove('open-select');
-                    });
+                    viewer.createModal(scene,"<?=str_replace('#','',$modalContainer);?>","",true,false,canvasContainer,mainContainer);
+            //         var modalContentContainer = canvasContainer.querySelector('.dc-modal-content-container');
+            //         modalContentContainer.classList.add('fullscreen');
+            //
+            //         var fullscreenContentContainer = canvasContainer.querySelector('.dc-modal-image-container');
+            //         if(canvasContainer && fullscreenContentContainer){
+            //             fullscreenContentContainer.appendChild(canvasContainer);
+            //             setTimeout(()=>{viewer.resize();},40);
+            //         }
+            //         fadeModalIn("",true,(isVisible)=>{});
+            //         body.prepend(modal);
+            //         body.classList.add('dc-modal-active');
+            //         scene.infopointsToggleVisibility(false);
+            //         scene.isFullscreen = true;
                 });
             }
 
-            var closeInfoButton = mainContainer.querySelector('.dc-sidebar-info-text .dc-btn-close');
+
+
+            var closeInfoButton = canvasContainer.querySelector('.dc-sidebar-info-text .dc-btn-close');
             if(closeInfoButton){
                 closeInfoButton.addEventListener('click', function (event) {
-                    var elem = mainContainer.querySelector('.dc-sidebar-info-text');
+                    var elem = canvasContainer.querySelector('.dc-sidebar-info-text');
                     elem.classList.add("hidden");
+                    scene.deactivateInfoPoints();
                 });
             }
 
-            function fadeModalIn(text = "", fadeIn = true){
-                var modal = document.querySelector('<?=$modalContainer;?>');
-                var modalText = document.querySelector("<?=$modalContainer;?> .dc-modal-content");
-                if(modalText){
-                    while (modalText.firstChild) {
-                        modalText.removeChild(modalText.firstChild);
-                    }
-                    modalText.innerHTML = '';
-                    if(text != ''){
-                        modalText.innerHTML = '<h3>'+text+'</h3>';
-                    }
-                }
-                if(!fadeIn){
-                    modal.classList.remove('fadeIn');
-                }else{
-                    modal.classList.add('fadeIn');
-                }
-            }
+            //function fadeModalIn(text = "", fadeIn = true){
+            //    var modal = document.querySelector('<?//=$modalContainer;?>//');
+            //    var modalText = document.querySelector("<?//=$modalContainer;?>// .dc-modal-content");
+            //    if(modalText){
+            //        while (modalText.firstChild) {
+            //            modalText.removeChild(modalText.firstChild);
+            //        }
+            //        modalText.innerHTML = '';
+            //        if(text != ''){
+            //            modalText.innerHTML = '<h3>'+text+'</h3>';
+            //        }
+            //    }
+            //    if(!fadeIn){
+            //        modal.classList.remove('fadeIn');
+            //    }else{
+            //        modal.classList.add('fadeIn');
+            //    }
+            //}
 
 
             function initSwiperSlider(container){
                 // var initSlideIndex = 0;
-                // var searchText = mainContainer.querySelector('#'+containerId+' .dc-selected');
-                // var sliderItems = Array.from(mainContainer.querySelectorAll('#'+containerId+' .swiper-slide'));
+                // var searchText = canvasContainer.querySelector('#'+containerId+' .dc-selected');
+                // var sliderItems = Array.from(canvasContainer.querySelectorAll('#'+containerId+' .swiper-slide'));
                 // var searchItem = sliderItems.find(x=> x.innerText == searchText.innerText);
                 // if(searchItem){
                 //     initSlideIndex = searchItem.getAttribute('data-swiper-slide-index');
                 // }
-                if(!container.querySelector('.swiper').className.includes('swiper-initialized')){
-                    const swiper = new Swiper(container.querySelector('.swiper'), {
+
+
+                if(!container.querySelector('.dc-swiper').className.includes('swiper-initialized') &&
+                    !container.querySelector('.dc-swiper').className.includes('swiper-container-initialized')
+                    ){
+                    var closeSelectButton = Array.from(canvasContainer.querySelectorAll('.close-dc-select'));
+                    if(closeSelectButton && closeSelectButton.length){
+                        closeSelectButton.forEach((button) => {
+                            button.addEventListener('click', function (event) {
+                                event.preventDefault();
+
+                                button.closest('.dc-scroll-container').classList.add('hidden');
+                                canvasContainer.querySelectorAll('.dc-sidebar')[0].classList.remove('open-select');
+                                scene.deactivateInfoPoints();
+                            });
+                        });
+                    }
+
+                    var swiper = new Swiper(container.querySelector('.dc-swiper'), {
                         // Optional parameters
                         direction: 'vertical',
                         loop: true,
@@ -1224,96 +1391,135 @@ if(count($settings[$i]) && array_search($settings[$i][0], $environmentSettings) 
 
                         // And if we need scrollbar
                         // scrollbar: {
-                        //     el: '.swiper-scrollbar',
+                        //     el: '.dc-swiper-scrollbar',
                         // },
                         // initialSlide: initSlideIndex,
                         slideToClickedSlide : true,
+                        init: false,
+                        speed: 150,
                         slidesPerView: 5,
                         loopedSlides: 5,
                         centeredSlides:true,
+                        grabCursor:true,
                         mousewheel: {
-                            invert: true,
-                        },
-                        on:{
-                            afterInit:(e) => {
-                                // e.update(true);
-                                var searchPattern = container.querySelector(' .dc-selected').innerText;
-                                if(searchPattern){
-                                    var activeElement = Array.from(container.querySelector(" .swiper-wrapper").querySelectorAll('.swiper-slide')).find(x=> x.innerText == searchPattern);
-                                    if(activeElement?.dataset?.swiperSlideIndex){
-                                        e.slideToLoop(activeElement?.dataset?.swiperSlideIndex);
-                                    }
-                                }else{
-
-                                }
-
-
-                            },slideChangeTransitionEnd:(e) => {
-                                if(typeof e !== 'undefined'){
-                                    e.update(true);
-                                }
-                            },transitionEnd:(e) => {
-                                if(typeof e !== 'undefined'){
-                                    e.update(true);
-                                }
-
-                                var element = container.querySelector(' .swiper-slide-active');
-                                if(element){
-
-                                    var elementSelected = container.querySelector(' .dc-selected');
-
-                                    if(element && elementSelected){
-                                        elementSelected.innerHTML = element.innerHTML;
-
-                                        var actionType = element.getAttribute('dc-type');
-                                        var actionTarget = element.getAttribute('dc-target');
-                                        var actionTargetSet = element.getAttribute('dc-target-set');
-                                        var actionlimitMeshes = element.getAttribute('dc-limitmeshes');
-                                        if(typeof actionType !== 'undefined' && actionType == 'material' &&
-                                            typeof actionTarget !== 'undefined' && actionTarget
-                                        ){
-                                            var material = scene.scene.getMaterialById(actionTarget);
-                                            if(typeof material !== 'undefined' && material){
-                                                var changeMeshes = scene.usedMeshesList;
-                                                if(typeof actionlimitMeshes !== 'undefined' && actionlimitMeshes){
-                                                    changeMeshes = changeMeshes.filter(x=> x.includes(actionlimitMeshes));
-                                                }
-                                                changeMeshes.forEach(meshName => {
-                                                    scene.scene.getMeshById(meshName).material = material;
-                                                })
-                                            }
-                                        }else if(typeof actionType !== 'undefined' && actionType == 'mesh' &&
-                                            typeof actionTarget !== 'undefined' && actionTarget &&
-                                            typeof actionTargetSet !== 'undefined' && actionTargetSet
-                                        ){
-                                            if(actionTargetSet == 'hide'){
-                                                scene.scene.getMeshById(actionTarget).isVisible = false;
-                                            }else if(actionTargetSet == 'show'){
-                                                scene.scene.getMeshById(actionTarget).isVisible = true;
-                                            }else if(actionTargetSet == 'toggle'){
-                                                scene.scene.getMeshById(actionTarget).isVisible = !scene.scene.getMeshById(actionTarget).isVisible;
-                                            }
-
-
-                                        }
-
-                                        //
-                                        // if(!element.getAttribute('clickListener')){
-                                        //
-                                        //     element.addEventListener('click', (evt) => {
-                                        //         evt.stopPropagation();
-                                        //         element.setAttribute('clickListener','true');
-                                        //         var scrollContainer = container.querySelector(' .dc-scroll-container');
-                                        //         scrollContainer.classList.add('hidden');
-                                        //         mainContainer.querySelector('.dc-sidebar').classList.remove('open-select');
-                                        //     }, false);
-                                        // }
-
-                                    }
-                                }
-                            },
+                            invert: false,
                         }
                     });
+                    swiper.on('slideChangeTransitionEnd', function () {
+                        if(typeof this !== 'undefined'){
+                            this.update(true);
+                        }
+                    });
+                    swiper.on('activeIndexChange', function () {
+
+                        if(typeof this !== 'undefined'){
+                            this.update(true);
+                        }
+
+                        var element = container.querySelector(' .swiper-slide-active');
+                        if(element){
+
+                            var elementSelected = container.querySelector(' .dc-selected');
+
+                            if(element && elementSelected){
+                                elementSelected.innerHTML = element.innerHTML;
+
+                                var actionType = element.getAttribute('dc-type');
+                                var actionTarget = element.getAttribute('dc-target');
+                                var actionTargetSet = element.getAttribute('dc-target-set');
+                                var actionlimitMeshes = element.getAttribute('dc-limitmeshes');
+                                if(typeof actionType !== 'undefined' && actionType == 'material' &&
+                                    typeof actionTarget !== 'undefined' && actionTarget
+                                ){
+
+                                    var material = scene.scene.getMaterialById(actionTarget);
+                                    // material.environmentTexture  = eqTexture;
+                                    // material.microSurface = 0.96;
+                                    if(typeof material !== 'undefined' && material){
+                                        var usedMeshes = scene.usedMeshesList;
+                                        var changeMeshes = []
+                                        if(typeof actionlimitMeshes !== 'undefined' && actionlimitMeshes){
+                                            var limitMeshes = actionlimitMeshes.split(',');
+                                            if(limitMeshes.length){
+                                                limitMeshes.forEach(meshName => {
+                                                    if(meshName.includes('*')){
+                                                        var filteredMesh = usedMeshes.filter(x=> x.includes(meshName));
+                                                        if(filteredMesh.length){
+                                                            changeMeshes = [...new Set([...filteredMesh,...changeMeshes])];
+                                                        }
+                                                    }else{
+                                                        var filteredMesh = usedMeshes.filter(x=> x == (meshName));
+                                                        if(filteredMesh.length){
+                                                            changeMeshes = [...new Set([...filteredMesh,...changeMeshes])];
+                                                        }
+                                                    }
+                                                });
+                                            }
+                                        }else{
+                                            changeMeshes = usedMeshes;
+                                        }
+                                        changeMeshes.forEach(meshName => {
+                                            scene.scene.getMeshById(meshName).material = material;
+                                        })
+                                    }
+                                }else if(typeof actionType !== 'undefined' && actionType == 'mesh' &&
+                                    typeof actionTarget !== 'undefined' && actionTarget &&
+                                    typeof actionTargetSet !== 'undefined' && actionTargetSet
+                                ){
+                                    if(actionTargetSet == 'hide'){
+                                        scene.scene.getMeshById(actionTarget).isVisible = false;
+                                    }else if(actionTargetSet == 'show'){
+                                        scene.scene.getMeshById(actionTarget).isVisible = true;
+                                    }else if(actionTargetSet == 'toggle'){
+                                        scene.scene.getMeshById(actionTarget).isVisible = !scene.scene.getMeshById(actionTarget).isVisible;
+                                    }
+
+
+                                }
+
+
+                            }
+                        }
+                    });
+                    swiper.on('init', function () {
+                        var searchPattern = container.querySelector(' .dc-selected').innerText;
+                        if(searchPattern){
+                            var activeElement = Array.from(container.querySelector(" .swiper-wrapper").querySelectorAll('.swiper-slide')).find(x=> x.innerText == searchPattern);
+                            if(activeElement?.dataset?.swiperSlideIndex){
+                                this.slideToLoop(activeElement?.dataset?.swiperSlideIndex);
+                            }
+                        }else{
+
+                        }
+                        var sliders = this.el.querySelectorAll(' .swiper-slide');
+                        sliders.forEach(slider => {
+                            slider.addEventListener('click', (evt) => {
+                                setTimeout(()=>{
+                                    var scrollContainer = container.querySelector(' .dc-scroll-container');
+                                    scrollContainer.classList.add('hidden');
+                                    canvasContainer.querySelector('.dc-sidebar').classList.remove('open-select');
+                                    scene.deactivateInfoPoints();
+                                }, 250);
+
+                                // if(evt.target.className.includes('swiper-slide-active')){
+                                //     evt.stopPropagation();
+                                // }else{
+                                //     // var slideIndex = evt.target.getAttribute('data-swiper-slide-index');
+                                //     // this.slideToLoop(slideIndex);
+                                //     setTimeout(()=>{
+                                //         var scrollContainer = container.querySelector(' .dc-scroll-container');
+                                //         scrollContainer.classList.add('hidden');
+                                //         canvasContainer.querySelector('.dc-sidebar').classList.remove('open-select');
+                                //     }, 150);
+                                // }
+                            }, false);
+                        });
+                    });
+
+                    setTimeout(()=>{
+                        swiper.init();
+                    }, 100);
+
                 }
 
             }

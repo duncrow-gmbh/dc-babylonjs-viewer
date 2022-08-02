@@ -42,8 +42,9 @@ document.addEventListener("DOMContentLoaded", function(event) {
                 ["blackList", "text", "elements, comma separated, to hide"],
                 // ["enableGuiVisibility","boolean"],
                 ["enableGuiSelect","boolean"],
-                // ["enableGuiAnimations","boolean"],
+                ["enableGuiAnimations","boolean"],
                 ["enableInteractButton","boolean"],
+                ["sceneEnvironmentTextur", "text", "Path to EnvironmentTexture (.dds) "],
             ]
             var settingsList = [
                 {
