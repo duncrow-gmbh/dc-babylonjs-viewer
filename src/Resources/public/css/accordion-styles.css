@@ -1,0 +1,106 @@
+/*.dc-modal-content-container {
+    position: absolute;
+    transform: translate(-50%,-50%);
+    left: 50%;
+    top: 50%;
+    width: calc(100% - 10rem);
+    height: calc(100% - 10rem);
+    overflow: hidden;
+}
+
+.dc-modal-content-container .inner{
+    background:white; 
+}
+.canvas-container{
+    background: #f3f3f3;
+    border-radius:15px; 
+    margin-bottom:2rem;
+    margin-top:2rem; 
+    width:100%;
+    height:0;
+    padding-top:56%;
+    overflow:hidden;
+    position:relative;
+    margin-bottom:15em;
+
+    
+}
+.canvas-container canvas{
+    position: absolute;
+    top:0;
+    left:0;
+    width:100%;
+    height:100%; 
+}
+@media only screen and (max-width: 768px) {
+    .canvas-container{
+        width: 100%;
+        height: 88vh;
+        padding-top: 00%;
+    }
+    .dc-modal-content-container {
+        width: calc(100% - 2rem);
+        height: calc(100% - 2rem);
+    }
+}
+@media only screen and (min-width: 768px) {
+    .canvas-container canvas.width-66{
+        
+        width:62.5% !important; 
+    
+    } 
+}
+.dc-renderimage{
+    width:100%;
+    height:auto;
+}
+.dc-hidden{
+    display:none !important; 
+}
+.dc-modal-active{
+    overflow: hidden;
+    width:100%;
+    height:100%;
+}
+.dc-btn-close {
+    position: absolute;
+    right: 2rem;
+    top: 1rem;
+    width: 2rem;
+    color:black;
+    font-size: 2rem;
+    cursor: pointer;
+    transition:all 200ms ease;
+    transform:rotate(0);
+}
+.dc-btn-close:hover{
+    transform:rotate(90deg); 
+    color:darkgray;
+}
+.dc-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255,255,255,.75);
+    z-index: 999;
+}
+.dc-modal-image-container{
+    text-align: center;
+}
+.dc-download {
+    text-decoration: none;
+    color: black;
+    padding: 0.25rem 0.5rem;
+    display: inline-block;
+    border: 1px solid gray;
+    background:white;
+    border-radius: 3px;
+    margin-bottom: 0.5rem;
+    transition:all 200ms ease; 
+}
+.dc-download:hover{
+    background: darkgray;
+    color:white;
+}*/

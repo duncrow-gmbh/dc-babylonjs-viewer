@@ -1,7 +1,7 @@
 <?php
 if (TL_MODE == 'BE') {?>
-    <div class="cte_type published">DC Babylonjs Viewer Module</div>
     <?= $this->headline; ?>
+    <div class="cte_type published">DC Babylonjs Viewer Module</div>
     <?php
 }
 if (TL_MODE != 'BE') {
@@ -11,1053 +11,406 @@ if (TL_MODE != 'BE') {
     $GLOBALS['TL_HEAD'][] = '<script src="https://cdn.jsdelivr.net/npm/babylonjs@5.14.0/babylon.js"></script>';
     $GLOBALS['TL_HEAD'][] = '<script src="https://cdn.jsdelivr.net/npm/babylonjs-loaders@5.14.0/babylonjs.loaders.min.js"></script>';
     $GLOBALS['TL_HEAD'][] = '<script src="https://cdn.jsdelivr.net/npm/babylonjs-gui@5.14.0/babylon.gui.min.js"></script>';
-    $GLOBALS['TL_HEAD'][] = '<link rel="stylesheet" href="https://unpkg.com/swiper@8/swiper-bundle.min.css" />';
-    $GLOBALS['TL_HEAD'][] = '<script src="https://unpkg.com/swiper@8/swiper-bundle.min.js"></script>';
+    $GLOBALS['TL_HEAD'][] = '<script src="bundles/contaobabylonjsviewer/js/duncrow-bjs-gui.js"></script>';
+    $GLOBALS['TL_HEAD'][] = '<link rel="stylesheet" href="bundles/contaobabylonjsviewer/css/accordion-styles.css" />';
+    $GLOBALS['TL_HEAD'][] = '<link rel="stylesheet" href="bundles/contaobabylonjsviewer/css/gui-styles.css" />';
+    $GLOBALS['TL_HEAD'][] = '<link rel="stylesheet" href="bundles/contaobabylonjsviewer/css/viewer-styles.css" />';
 
     $settings = json_decode(html_entity_decode($this->dc_viewer_settings));
     $files = array_map('\StringUtil::binToUuid', deserialize($this->dc_viewer_settings_files, true));
+    $filesMaterial = array_map('\StringUtil::binToUuid', deserialize($this->dc_viewer_settings_material_files, true));
+    $filesAccordionSettings = array_map('\StringUtil::binToUuid', deserialize($this->dc_viewer_settings_accoridion_file, true));
+    $filesGuiSettings = array_map('\StringUtil::binToUuid', deserialize($this->dc_viewer_settings_gui_file, true));
+    $filesCameraSettings = array_map('\StringUtil::binToUuid', deserialize($this->dc_viewer_settings_camera, true));
+    $filesEnvironmentSettings = array_map('\StringUtil::binToUuid', deserialize($this->dc_viewer_settings_environment, true));
+    $filesMarkersSettings = array_map('\StringUtil::binToUuid', deserialize($this->dc_viewer_settings_markers_file, true));
+    
+     
 
     $objFile = [];
-    for($i = 0; $i < count($files); $i++){
-        $objFile[] = [(\FilesModel::findByUuid($files[$i]))->path, (\FilesModel::findByUuid($files[$i]))->extension];
+    $objFileAccordionSettings = [];
+    $objFileGuiSettings = [];
+    $objFileCameraSettings = [];
+    $objFileEnvironmentSettings = [];
+    $objFileMarkerJson = []; 
+    // for($i = 0; $i < count($files); $i++){
+    //     $objFile[] = [(\FilesModel::findByUuid($files[$i]))->path, (\FilesModel::findByUuid($files[$i]))->extension];
+    // }
+    // for($i = 0; $i < count($filesAccordionSettings); $i++){
+    //     $objFileAccordionSettings[] = [(\FilesModel::findByUuid($filesAccordionSettings[$i]))->path, (\FilesModel::findByUuid($filesAccordionSettings[$i]))->extension];
+    // }
+    // for($i = 0; $i < count($filesGuiSettings); $i++){
+    //     $objFileGuiSettings[] = [(\FilesModel::findByUuid($filesGuiSettings[$i]))->path, (\FilesModel::findByUuid($filesGuiSettings[$i]))->extension];
+    // }
+    // for($i = 0; $i < count($filesCameraSettings); $i++){
+    //     $objFileCameraSettings[] = [(\FilesModel::findByUuid($filesAccordionSettings[$i]))->path, (\FilesModel::findByUuid($filesAccordionSettings[$i]))->extension];
+    // }
+    // for($i = 0; $i < count($filesGuiSettings); $i++){
+    //     $objFileEnvironmentSettings[] = [(\FilesModel::findByUuid($filesGuiSettings[$i]))->path, (\FilesModel::findByUuid($filesGuiSettings[$i]))->extension];
+    // }
+    if (!function_exists('loadFiles')) {
+        function loadFiles( $src){
+            $returnArry = []; 
+            if($src && count ($src)){
+                for($i = 0; $i < count($src); $i++){
+                    array_push($returnArry, [(\FilesModel::findByUuid($src[$i]))->path, (\FilesModel::findByUuid($src[$i]))->extension]);
+                }
+            }
+            return $returnArry;
+            
+        }
     }
-    $cameraSettings = ["radius","minZ","maxZ","minZoom","maxZoom","upperVerticalAngelLimit","lowerVerticalAngelLimit","upperHorizontalAngelLimit","lowerHorizontalAngelLimit","panningSensibility","wheelPrecision","useAutoRotationBehavior","rotationSpeed"];
-    $environmentSettings = ["backgroundColor","createGround","groundSize","createSkybox","skyboxSize","skyboxColor","groundColor","groundShadowLevel","setupImageProcessing","cameraContrast","cameraExposure"];
-    $otherSettings = ["sceneEnvironmentTextur", "deactivateViewerOnStart","highlightOnClick","highlightColor", "focusOnHelperName", "focusImagePath", "focusRadius", "toggleVisibilityList","blackList", "enableGuiVisibility", "enableGuiAnimations", "enableInteractButton", "enableGuiSelect"];
+    $objFilePrefix = ""; 
+    $objFile = loadFiles($files);
+    $objFileMaterial = loadFiles($filesMaterial);
+    if($objFileMaterial && count($objFileMaterial)){
+        $objFileMaterialPrefix = basename($objFileMaterial[0][0], '.'.$objFileMaterial[0][1]).'_'; 
+    }else if($objFile && count($objFile)){
+        $objFilePrefix = basename($objFile[0][0], '.'.$objFile[0][1]).'_'; 
+    }
+    
+    
+    $objFileAccordionSettings = loadFiles($filesAccordionSettings);
+    $objFileGuiSettings =loadFiles($filesGuiSettings);
+    $objFileCameraSettings = loadFiles($filesCameraSettings);
+    $objFileEnvironmentSettings = loadFiles($filesEnvironmentSettings);
+    $objFileMarkerJson = loadFiles($filesMarkersSettings); 
 
-    $zoomSelectedMesh = false;
-    $activateMeshSelection = false;
-    $highlightColor = "new BABYLON.Color3(0.3,0.4,0.1)";
-    $backgroundColor = "new BABYLON.Color3(0.3,0.3,0.3)";
-    $focusOnHelperName = "";
-    $focusImagePath = "";
-    $focusRadius = 5;
-    $toggleVisibilityList = "";
-    $blackList = "";
-    $sceneEnvironmentTextur = "";
-    $enableGuiVisibility = false;
-    $enableGuiAnimations = false;
-    $enableGuiSelect = false;
-    $deactivateViewerOnStart = false;
-    $enableInteractButton = false;
+    $otherSettings = [
+        "buttonsGuiDefault",
+        "backgroundColor",
+        "sceneEnvironmentTextur", 
+        "highlightOnClick",
+        "highlightColor", 
+        "toggleVisibilityList",
+        "blackList", 
+        "enableWebshop",
+        "cameraFocus",
+        "showOnlyMeshlist",
+        "webshopStartPrice",
+        "webshopButtonText",
+        "rotationBehaviour",
+        "environmentToCameraRotation"
+    ];
 
+    // $buttonsGuiDefault = true; 
+    // $zoomSelectedMesh = false;
+    // $activateMeshSelection = false;
+    // $highlightColor = "new BABYLON.Color3(0.3,0.4,0.1)";
+    // $backgroundColor = "new BABYLON.Color3(0.3,0.3,0.3)";
+    // $toggleVisibilityList = "";
+    // $blackList = "";
+    // $sceneEnvironmentTextur = "";
+    // $enableWebshop = false;
+    // $webshopStartPrice = 0; 
+    // $cameraFocus = "";
+    // $showOnlyMeshlist  = ""; 
+    // $materialPrefix = "";
+    // $webshopButtonText = "";
+
+
+    // converts "buttonsGuiDefault" to variable $buttonsGuiDefault
     for ($i = 0; $i < count($settings); $i++) {
         if (count($settings[$i]) && array_search($settings[$i][0], $otherSettings) !== false) {
-            if ($settings[$i][0] == "deactivateViewerOnStart" && $settings[$i][1] == "true") {
-                $deactivateViewerOnStart = true;
-            } else if ($settings[$i][0] == "highlightColor") {
-                $highlightColor = 'new BABYLON.Color3' . $settings[$i][1];
-            } else if ($settings[$i][0] == "highlightOnClick" && $settings[$i][1] == "true") {
-                $activateMeshSelection = true;
-            } else if ($settings[$i][0] == " zoomSelectedMesh" && $settings[$i][1] == "true") {
-                $zoomSelectedMesh = true;
-            }else if ($settings[$i][0] == "focusOnHelperName") {
-                $focusOnHelperName = $settings[$i][1];
-
-            } else if ($settings[$i][0] == "focusImagePath") {
-                $focusImagePath = $settings[$i][1];
-            } else if ($settings[$i][0] == "focusRadius") {
-                $focusRadius = $settings[$i][1];
-            } else if ($settings[$i][0] == "toggleVisibilityList") {
-                $toggleVisibilityList = $settings[$i][1];
-            } else if ($settings[$i][0] == "enableGuiVisibility") {
-                $enableGuiVisibility = filter_var($settings[$i][1], FILTER_VALIDATE_BOOLEAN);
-            } else if ($settings[$i][0] == "enableGuiAnimations") {
-                $enableGuiAnimations = filter_var($settings[$i][1], FILTER_VALIDATE_BOOLEAN) ;
-            } else if ($settings[$i][0] == "enableGuiSelect") {
-                $enableGuiSelect = filter_var($settings[$i][1], FILTER_VALIDATE_BOOLEAN) ;
-            } else if ($settings[$i][0] == "enableInteractButton") {
-                $enableInteractButton = filter_var($settings[$i][1], FILTER_VALIDATE_BOOLEAN) ;
-            } else if ($settings[$i][0] == "blackList") {
-                $blackList = $settings[$i][1];
-            }else if ($settings[$i][0] == "sceneEnvironmentTextur") {
-                $sceneEnvironmentTextur = $settings[$i][1];
+            if(str_contains($settings[$i][0], 'Color') && $settings[$i][1]){
+                ${$settings[$i][0]} = 'new BABYLON.Color3' . $settings[$i][1];
             }
+            else if($settings[$i][1] === 'true' || $settings[$i][1] === 'false' || $settings[$i][1] === true || $settings[$i][1] === false){
+                ${$settings[$i][0]} = filter_var($settings[$i][1], FILTER_VALIDATE_BOOLEAN);
+            }else{
+                ${$settings[$i][0]} = $settings[$i][1];
+            }
+
+            //  if ($settings[$i][0] == "highlightColor") {
+            //     $highlightColor = 'new BABYLON.Color3' . $settings[$i][1];
+            // } else if ($settings[$i][0] == "backgroundColor") {
+            //     $backgroundColor = $settings[$i][1];
+            // } else if ($settings[$i][0] == "highlightOnClick" && $settings[$i][1] == "true") {
+            //     $activateMeshSelection = true;
+            // } else if ($settings[$i][0] == " zoomSelectedMesh" && $settings[$i][1] == "true") {
+            //     $zoomSelectedMesh = true;
+            // }else if ($settings[$i][0] == "toggleVisibilityList") {
+            //     $toggleVisibilityList = $settings[$i][1];
+            // } else if ($settings[$i][0] == "enableGuiVisibility") {
+            //     $enableGuiVisibility = filter_var($settings[$i][1], FILTER_VALIDATE_BOOLEAN);
+            // }  else if ($settings[$i][0] == "enableWebshop") {
+            //     $enableWebshop = filter_var($settings[$i][1], FILTER_VALIDATE_BOOLEAN) ;
+            // } else if ($settings[$i][0] == "blackList") {
+            //     $blackList = $settings[$i][1];
+            // }else if ($settings[$i][0] == "sceneEnvironmentTextur") {
+            //     $sceneEnvironmentTextur = $settings[$i][1];
+            // }else if ($settings[$i][0] == "cameraFocus") {
+            //     $cameraFocus = $settings[$i][1];
+            // }else if($settings[$i][0] == "showOnlyMeshlist"){
+            //     $showOnlyMeshlist = $settings[$i][1];
+            // }else if($settings[$i][0] == "materialPrefix"){
+            //     $materialPrefix = $settings[$i][1];
+            // }else if($settings[$i][0] == "webshopStartPrice"){
+            //     $webshopStartPrice = $settings[$i][1];
+            // }else if($settings[$i][0] == "webshopButtonText"){
+            //     $webshopButtonText = $settings[$i][1];
+            // }
+            
+            
         }
     }
 
     $mainContainer = "#dc-babylon-js-viewer-container-".$this->id;
-    $canvasContainer = "#dc-canvas-container-".$this->id;
-    $modalContainer = "#dc-modal-".$this->id;
-    $modalContainerCopy = "#dc-modal-copy-".$this->id;
-
     ?>
-<!-- templates/ce_my_content_element.html5 -->
-<style>
-    <?=$modalContainerCopy;?>,
-    <?=$mainContainer;?>{
-        background:white;
-
-    }
-    <?=$modalContainerCopy;?>  .dc-fps-viewer,
-    <?=$modalContainer;?> .dc-fps-viewer,
-    <?=$canvasContainer;?> .dc-fps-viewer {
-        background: rgba(255,255,255,.5);
-        padding: 0.5rem;
-        font-size: 12px;
-        border-radius: 6px;
-        left: 50%;
-        right: auto !important;
-        transform: translateX(-50%);
-        top: 1rem !important;
-        pointer-events: none;
-    }
-    <?=$modalContainerCopy;?>,
-    <?=$mainContainer;?>,
-    <?=canvasContainer;?>{
-        position: relative;
-        /*margin: 10rem 0;*/
-    }
-    <?=$modalContainerCopy;?> *, <?=$modalContainerCopy;?> ::before, <?=$modalContainerCopy;?> ::after,
-    <?=$modalContainer;?> *,<?=$modalContainer;?> ::before,<?=$modalContainer;?> ::after,
-    <?=$mainContainer;?> *,<?=$mainContainer;?> ::before,<?=$mainContainer;?> ::after {
-        box-sizing: border-box;
-    }
-    <?=$modalContainerCopy;?> .dc-viewer-controller,
-    <?=$modalContainer;?> .dc-viewer-controller,
-     <?=$canvasContainer;?> .dc-viewer-controller {
-        position: absolute;
-        top: 2rem;
-        right: 2rem;
-        background: white;
-        border-radius: 15px;
-        padding: 0.5rem;
-        -webkit-box-shadow: 0px 0px 8px 0px rgba(0,0,0,0.18);
-        box-shadow: 0px 0px 8px 0px rgba(0,0,0,0.18);
-    }
-    <?=$canvasContainer;?> .row{
-        display: flex;
-        flex-wrap: wrap;
-        margin-right: -8px;
-        margin-left: -8px;
-    }
-    <?=$canvasContainer;?> .col-12{
-        position: relative;
-        width: 100%;
-        padding-right: 8px;
-        padding-left: 8px;
-        flex: 0 0 100%;
-        max-width: 100%;
-    }
-    <?=$canvasContainer;?> .col-6{
-        position: relative;
-        width: 50%;
-        padding-right: 8px;
-        padding-left: 8px;
-        flex: 0 0 50%;
-        max-width: 50%;
-    }
-    <?=$canvasContainer;?> .col-9{
-        position: relative;
-        width: 75%;
-        padding-right: 8px;
-        padding-left: 8px;
-        flex: 0 0 75%;
-        max-width: 75%;
-    }
-    <?=$canvasContainer;?> .col-3{
-        position: relative;
-        width: 25%;
-        padding-right: 8px;
-        padding-left: 8px;
-        flex: 0 0 25%;
-        max-width: 25%;
-    }
-    @media screen and (min-width: 768px) {
-        <?=$canvasContainer;?> .col-md-9{
-
-                position: relative;
-                width: 75%;
-                padding-right: 8px;
-                padding-left: 8px;
-                flex: 0 0 75%;
-                max-width: 75%;
-
-        }
-    }
-    @media screen and (min-width: 768px) {
-        <?=$canvasContainer;?> .col-md-3{
-
-            position: relative;
-            width: 25%;
-            padding-right: 8px;
-            padding-left: 8px;
-            flex: 0 0 25%;
-            max-width: 25%;
-        }
-    }
-    <?=$canvasContainer;?> .disabled{
-        opacity: .875;
-    }
-    <?=$canvasContainer;?> .dc-loading-container{
-        display:hidden;
-        position:absolute;
-        left:0;
-        top:0;
-        width:100%;
-        height:100%;
-        background:rgba(255,255,255,.5);
-        z-index: 9999;
-    }
-    <?=$canvasContainer;?> .lds-ring {
-        display: inline-block;
-        position: absolute;
-        left:50%;
-        top:50%;
-        transform:translate(-50%,-50%);
-        width: 80px;
-        height: 80px;
-    }
-    <?=$canvasContainer;?> .lds-ring div {
-        box-sizing: border-box;
-        display: block;
-        position: absolute;
-        width: 64px;
-        height: 64px;
-        margin: 8px;
-        border: 8px solid #fff;
-        border-radius: 50%;
-        animation: lds-ring 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
-        border-color: #fff transparent transparent transparent;
-    }
-    <?=$canvasContainer;?> .lds-ring div:nth-child(1) {
-        animation-delay: -0.45s;
-    }
-    <?=$canvasContainer;?> .lds-ring div:nth-child(2) {
-        animation-delay: -0.3s;
-    }
-    <?=$canvasContainer;?> .lds-ring div:nth-child(3) {
-        animation-delay: -0.15s;
-    }
-    @keyframes lds-ring {
-        0% {
-            transform: rotate(0deg);
-        }
-        100% {
-            transform: rotate(360deg);
-        }
-    }
-    <?=$canvasContainer;?> .dc-icondeactivated{
-        display:block;
-    }
-    <?=$canvasContainer;?> .dc-iconactivated{
-        display:none;
-    }
-    <?=$canvasContainer;?> .dc-viewer-interaction.active .dc-iconactivated{
-        display:block;
-    }
-    <?=$canvasContainer;?> .dc-viewer-interaction.active .dc-icondeactivated {
-        display:none;
-    }
-
-    <?=$canvasContainer;?> button.play-stop-animation{
-        display:inline-block;
-        margin-right: .3rem;
-        border:none;
-        background:none;
-        width:2rem;
-        height:2rem;
-        text-indent: -9999em;
-        position:relative;
-        background: lightgray;
-        border-radius:50%;
-        cursor: pointer;
-    }
-    <?=$canvasContainer;?> button.play-stop-animation:before {
-        position:absolute;
-        left:50%;
-        top:50%;
-        transform:translate(-50%,-50%);
-        content:"\23F5";
-        text-indent: 0;
-    }
-    <?=$canvasContainer;?> button.play-stop-animation.playing:before{
-        content:"\23F9"
-    }
-    <?=$modalContainerCopy;?> .dc-canvas3d-container,
-    <?=$modalContainer;?> .dc-canvas3d-container,
-    <?=$canvasContainer;?> .dc-canvas3d-container{
-        /*overflow: hidden;*/
-        /*box-shadow: 9px 9px 42px #f0f0f0, -9px -9px 42px #fff;*/
-        /*position: relative;*/
-        width:100%;
-        padding-top: 60%;
-      background: rgba(133,133,133,.7)
-    }
-    <?=$modalContainerCopy;?> .dc-modal-image-container .dc-canvas3d-container,
-    <?=$modalContainer;?> .dc-modal-image-container .dc-canvas3d-container{
-        position:absolute;
-        height:100%;
-        padding:0;
-        width:100%;
-        left:0;
-        top:0;
-    }
-    <?=$modalContainerCopy;?> .dc-canvas-3d,
-    <?=$modalContainer;?> .dc-canvas-3d,
-    <?=$canvasContainer;?> .dc-canvas-3d{
-        width: 100%;
-        height: 100%;
-        touch-action: none;
-        padding: 0;
-        margin: 0;
-        position: absolute;
-        top: 0;
-        left: 0;
-        -webkit-touch-callout: none;
-        -webkit-user-select: none;
-        -khtml-user-select: none;
-        -moz-user-select: none;
-        -ms-user-select: none;
-        user-select: none;
-        outline: none;
-        -webkit-tap-highlight-color: rgba(255, 255, 255, 0); /* mobile webkit */
-    }
-    <?=$canvasContainer;?> .dc-viewer-flap{
-        position:absolute;
-        left:0;
-        top:50%;
-        height: 50%;
-        border-radius: 0 35px 35px 0;
-        transform: translateY(-50%);
-        background: #fff;
-        width: 3rem;
-        z-index: 9;
-        opacity: .5;
-        display: none;
-    }
-
-
-/*
-    <?=$canvasContainer;?> #dc-showhide-all-container{
-        padding-bottom:.5rem;
-        margin-bottom:.5rem;
-        border-bottom: 1px solid gray;
-    }
-    */
-    <?=$modalContainerCopy;?>,
-    <?=$modalContainer;?> {
-        position:absolute;
-        z-index: 99999;
-        width:100%;
-        height: 100%;
-        background:rgba(0,0,0,0.2);
-        left:0;
-        top:0;
-        visibility: hidden;
-        opacity: 0;
-        transition: visibility 0s,opacity 0.5s linear;
-    }
-    <?=$modalContainerCopy;?> .dc-modal-content,
-    <?=$modalContainer;?> .dc-modal-content{
-        position: relative;
-                              z-index: 2;
-      }
-    <?=$modalContainerCopy;?> .dc-modal-content h3,
-    <?=$modalContainer;?> .dc-modal-content h3{
-        padding-left:1rem;
-        margin:0;
-                          }
-    <?=$modalContainerCopy;?> .dc-modal-content-container,
-    <?=$modalContainer;?> .dc-modal-content-container{
-        position:fixed;
-        left:50%;
-        top:50%;
-        transform:translate(-50%,-50%);
-        width:100%;
-        height:100%;
-        z-index: 99999;
-    }
-    <?=$modalContainerCopy;?> .hidden,
-    <?=$modalContainer;?> .hidden{
-           display:none !important;
-       }
-    <?=$modalContainerCopy;?> .dc-modal-content-container.fullscreen > .inner,
-      <?=$modalContainer;?> .dc-modal-content-container.fullscreen >  .inner
-      {
-        background: rgba(0,0,0,.5);
-      }
-    <?=$modalContainerCopy;?> .dc-modal-content-container.fullscreen .dc-modal-content,
-    <?=$modalContainer;?> .dc-modal-content-container.fullscreen  .dc-modal-content {
-        position: absolute;
-        z-index: 2;
-        height: 100%;
-        width: 100%;
-        left: 50%;
-        top: 50%;
-        transform: translate(-50%,-50%);
-    }
-    <?=$modalContainerCopy;?> .dc-modal-content-container.fullscreen .dc-modal-content .row,
-    <?=$modalContainer;?> .dc-modal-content-container.fullscreen  .dc-modal-content .row{
-            height:100vh;
-    }
-    <?=$modalContainerCopy;?> .dc-modal-content-container:not(.fullscreen),
-    <?=$modalContainer;?> .dc-modal-content-container:not(.fullscreen){
-        position:absolute;
-        max-width: 1000px;
-        max-height: 700px;
-      height: 100vh;
-      width: 100vh;
-    }
-    <?=$modalContainerCopy;?>  .dc-modal-content-container >.inner,
-    <?=$modalContainer;?> .dc-modal-content-container > .inner{
-        background:white;
-        height: 100%;
-        padding: 1rem;
-    }
-    <?=$modalContainerCopy;?> .dc-btn-close,
-    <?=$modalContainer;?> .dc-btn-close,
-    <?=$canvasContainer;?> .dc-btn-close{
-        position:absolute;
-        right:2rem;
-        top:2rem;
-        -webkit-box-shadow: 1px 1px 4px 0px rgba(0,0,0,0.19);
-        box-shadow: 1px 1px 4px 0px rgba(0,0,0,0.19);
-        width: 2rem;
-        height:2rem;
-        text-align:center;
-        font-weight:bold;
-        background:white;
-        color:black;
-        border-radius:50%;
-        line-height: 2rem;
-        cursor:pointer;
-        z-index: 9;
-    }
-    <?=$modalContainerCopy;?> .dc-image-container,
-    <?=$modalContainer;?> .dc-image-container{
-      -webkit-box-shadow: 1px 1px 4px 0 rgb(0 0 0 / 19%);
-      box-shadow: 1px 1px 4px 0 rgba(0,0,0,.19);
-      position: relative;
-      width: calc(100% - 2rem);
-      height: 100%;
-      overflow: hidden;
-      position: absolute;
-      top: 0rem;
-    }
-    <?=$modalContainerCopy;?> .dc-image-container img,
-    <?=$modalContainer;?> .dc-image-container img{
-        object-fit: cover;
-        width:100%;
-        height:100%;
-    }
-    <?=$modalContainerCopy;?> .dc-download,
-    <?=$modalContainer;?> .dc-download{
-        text-decoration: none;
-        color:black;
-        border:1px solid black;
-        border-radius: 5px;
-        background:white;
-        padding: .25rem .5rem;
-        margin: .25rem;
-         position: absolute;
-         left: 50%;
-         transform: translateX(-50%);
-         bottom: 1.875rem;
-    }
-    <?=$modalContainerCopy;?> .dc-download:focus, <?=$modalContainerCopy;?> .dc-download:hover, <?=$modalContainerCopy;?> .dc-download:active,
-    <?=$modalContainer;?> .dc-download:focus, <?=$modalContainer;?> .dc-download:hover, <?=$modalContainer;?> .dc-download:active{
-        opacity: .75;
-    }
-    <?=$canvasContainer;?> .dc-babylonjs-controller{
-        display:block;
-        width:2rem;
-        height:2rem;
-        background:white;
-        -webkit-box-shadow: 1px 1px 4px 0px rgba(0,0,0,0.19);
-        box-shadow: 1px 1px 4px 0px rgba(0,0,0,0.19);
-        border-radius:5px;
-        position:relative;
-        text-indent: -999em;
-        margin:.25rem;
-        cursor:pointer;
-    }
-    <?=$canvasContainer;?> .dc-babylonjs-controller:before{
-        content:"";
-        display:block;
-        position:absolute;
-        left:50%;
-        top:50%;
-        transform:translate(-50%,-50%);
-        font-size:1rem;
-        text-indent: 0;
-        width:1rem;
-        display:inline-block;
-        margin-top:2px;
-    }
-    .dc-modal-content-container.fullscreen .dc-ctrl-fullscreen{
-          display:none !important;
-      }
-    <?=$canvasContainer;?> .dc-ctrl-fullscreen:before{
-        content: url("data:image/svg+xml,%3C%3Fxml version='1.0' encoding='UTF-8'%3F%3E%3Csvg id='a' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 62.44 62.44'%3E%3Cpath d='M57.98,7.66l-23.56,23.56,23.56,23.56v-12.41c.09-1.39,.84-2.14,2.23-2.23,1.39,.09,2.14,.84,2.23,2.23v17.84c-.09,1.39-.84,2.14-2.23,2.23h-17.84c-1.39-.09-2.14-.84-2.23-2.23,.09-1.39,.84-2.14,2.23-2.23h12.41l-23.56-23.56L7.66,57.98h12.41c1.39,.09,2.14,.84,2.23,2.23-.09,1.39-.84,2.14-2.23,2.23H2.23c-1.39-.09-2.14-.84-2.23-2.23v-17.84c.09-1.39,.84-2.14,2.23-2.23,1.39,.09,2.14,.84,2.23,2.23v12.41L28.02,31.22,4.46,7.66v12.41c-.09,1.39-.84,2.14-2.23,2.23-1.39-.09-2.14-.84-2.23-2.23V2.23C.09,.84,.84,.09,2.23,0H20.07c1.39,.09,2.14,.84,2.23,2.23-.09,1.39-.84,2.14-2.23,2.23H7.66L31.22,28.02,54.78,4.46h-12.41c-1.39-.09-2.14-.84-2.23-2.23,.09-1.39,.84-2.14,2.23-2.23h17.84c1.39,.09,2.14,.84,2.23,2.23V20.07c-.09,1.39-.84,2.14-2.23,2.23-1.39-.09-2.14-.84-2.23-2.23V7.66Z'/%3E%3C/svg%3E");
-    }
-    <?=$canvasContainer;?> .dc-ctrl-reset:before{
-        content: url("data:image/svg+xml,%3C%3Fxml version='1.0' encoding='UTF-8'%3F%3E%3Csvg id='a' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 62.43 62.46'%3E%3Cpath d='M31.21,.02c5.85,.09,11.1,1.53,15.75,4.32,4.74,2.79,8.46,6.51,11.15,11.15,2.79,4.74,4.23,9.99,4.32,15.75-.09,5.76-1.53,11.01-4.32,15.75-2.7,4.65-6.41,8.36-11.15,11.15-4.65,2.79-9.9,4.23-15.75,4.32-4.83,0-9.39-1.07-13.66-3.21-4.28-2.04-7.95-4.97-11.01-8.78-.74-1.21-.61-2.28,.42-3.21,1.12-.74,2.18-.6,3.21,.42,2.6,3.35,5.72,5.9,9.34,7.67,3.62,1.77,7.53,2.65,11.71,2.65,7.53-.19,13.85-2.79,18.96-7.81,5.02-5.11,7.62-11.43,7.81-18.96-.19-7.53-2.79-13.85-7.81-18.96-5.11-5.02-11.43-7.62-18.96-7.81-6.41,.09-12.13,2.14-17.15,6.13,0,.09-.05,.14-.14,.14l7.67,7.81c.65,.65,.84,1.44,.56,2.37-.47,.93-1.16,1.39-2.09,1.39H2.23c-1.39-.09-2.14-.84-2.23-2.23V2.23C0,1.3,.46,.61,1.39,.14c.93-.28,1.72-.09,2.37,.56l7.11,6.97c.09-.19,.23-.32,.42-.42C17.05,2.51,23.7,.1,31.22,0V.02ZM4.45,17.86H14.63L4.45,7.68v10.18Z'/%3E%3C/svg%3E");
-    }
-    <?=$canvasContainer;?> .dc-ctrl-screenshot:before{
-        content: url("data:image/svg+xml,%3C%3Fxml version='1.0' encoding='UTF-8'%3F%3E%3Csvg id='a' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 71.37 62.44'%3E%3Cpath d='M52,8.92h10.45c2.51,.09,4.6,.98,6.27,2.65s2.55,3.76,2.65,6.27V53.52c-.09,2.51-.98,4.6-2.65,6.27s-3.76,2.55-6.27,2.65H8.92c-2.51-.09-4.6-.98-6.27-2.65S.09,56.03,0,53.52V17.84c.09-2.51,.98-4.6,2.65-6.27s3.76-2.55,6.27-2.65h10.45l1.39-4.32C21.88,1.72,24.01,.19,27.17,0h17.01c3.16,.19,5.3,1.72,6.41,4.6l1.39,4.32h.02ZM5.72,14.64c-.84,.84-1.25,1.91-1.25,3.21V53.53c0,1.3,.42,2.37,1.25,3.21s1.9,1.25,3.21,1.25H62.46c1.3,0,2.37-.42,3.21-1.25s1.25-1.9,1.25-3.21V17.85c0-1.3-.42-2.37-1.25-3.21s-1.91-1.25-3.21-1.25h-13.66l-2.37-7.39c-.37-.93-1.12-1.44-2.23-1.53H27.19c-1.12,.09-1.86,.61-2.23,1.53l-2.37,7.39H8.93c-1.3,0-2.37,.42-3.21,1.25Zm18.96,10.04c2.88-2.97,6.55-4.51,11.01-4.6,4.46,.09,8.13,1.63,11.01,4.6,2.97,2.88,4.51,6.55,4.6,11.01-.09,4.46-1.63,8.13-4.6,11.01-2.88,2.98-6.55,4.51-11.01,4.6-4.46-.09-8.13-1.62-11.01-4.6-2.98-2.88-4.51-6.55-4.6-11.01,.09-4.46,1.62-8.13,4.6-11.01Zm3.07,3.07c-2.05,2.14-3.11,4.79-3.21,7.95,.09,3.16,1.16,5.81,3.21,7.95,2.14,2.05,4.79,3.11,7.95,3.21,3.16-.09,5.81-1.16,7.95-3.21,2.04-2.14,3.11-4.79,3.21-7.95-.09-3.16-1.16-5.81-3.21-7.95-2.14-2.04-4.79-3.11-7.95-3.21-3.16,.09-5.81,1.16-7.95,3.21Z'/%3E%3C/svg%3E");
-    }
-
-    <?=$canvasContainer;?> .dc-babylonjs-controller-container{
-        position:absolute;
-        left:1rem;
-        top:1rem;
-    }
-    <?=$canvasContainer;?> .controller-container-right{
-        left:auto;
-        right:1rem;
-    }
-    <?=$canvasContainer;?> .dc-swiper {
-        width: 100%;
-        height: 250px;
-    }
-    <?=$canvasContainer;?> .swiper-slide{
-        background:none;
-        cursor: pointer;
-    }
-
-
-    <?=$canvasContainer;?> .swiper-slide-active{
-        /*background:#E8E8E8;*/
-        cursor: pointer;
-    }
-    <?=$canvasContainer;?> .dc-scroll-container {
-         position:absolute;
-         top:50%;
-         transform: translateY(-50%);
-         left: 1rem;
-         width: calc(100% - 2.5rem);
-         height: 250px;
-         z-index: 9;
-     }
-    <?=$canvasContainer;?> .dc-scroll-container > label{
-        color:white;
-        padding-left:1rem;
-                             padding-bottom:.5rem;
-        margin-top:-2rem;
-                             position: relative;
-         }
-
-    <?=$canvasContainer;?> .dc-scroll-container > .inner{
-        position:absolute;
-        top:50%;
-        transform: translateY(-50%);
-         left: 1rem;
-         width: calc(100% - 2.5rem);
-        height: 250px;
-        z-index: 9;
-        border-radius: 11px;
-        overflow: hidden;
-        background:white;
-    }
-    <?=$canvasContainer;?> .dc-scroll-container > .inner:before{
-        content:'';
-        pointer-events: none;
-        background: rgb(255,255,255);
-        background: linear-gradient(0deg, rgba(255,255,255,1) 0%, rgba(255,255,255,0) 40%, rgba(255,255,255,0) 60%, rgba(255,255,255,1) 100%);
-        position: absolute;
-        left:0;
-        top:0;
-        width:100%;
-        height:100%;
-        z-index:15;
-    }
-    <?=$canvasContainer;?> .dc-scroll-container > .inner:after{
-        content:'';
-        pointer-events: none;
-        position: absolute;
-        left:0;
-        top:50%;
-        transform:translateY(-50%);
-        width:100%;
-        height:50px;
-        z-index: -1;
-        background:#E8E8E8;
-    }
-    <?=$canvasContainer;?> .dc-checkbox-container,
-    <?=$canvasContainer;?> .dc-checkbox-container label,
-    <?=$canvasContainer;?> .dc-checkbox-container input{
-        cursor:pointer
-    }
-    <?=$canvasContainer;?> .dc-checkbox-container label{
-        display: block;
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
-        height: 100%;
-    }
-
-    <?=$canvasContainer;?> .dc-selected,
-    <?=$canvasContainer;?> .dc-checkbox-container{
-        background: #fff;
-        color: #000;
-        height: 43px;
-        -webkit-box-shadow: 0px 0px 10px 5px rgb(0 0 0 / 5%);
-        box-shadow: 0px 0px 10px 5px rgb(0 0 0 / 5%);
-        border-radius: 11px;
-        position: relative;
-        margin-bottom: 1rem;
-        cursor:pointer;
-    }
-    <?=$canvasContainer;?> .dc-headline-container{
-        display: none;
-    }
-    <?=$canvasContainer;?> .dc-selected:hover,
-    <?=$canvasContainer;?> .dc-checkbox-container:hover{
-        -webkit-box-shadow: 0px 0px 10px 5px rgb(0 0 0 / 20%);
-        box-shadow: 0px 0px 10px 5px rgb(0 0 0 / 20%);
-    }
-    <?=$canvasContainer;?> .dc-selected .inner,
-    <?=$canvasContainer;?> .swiper-slide .inner{
-        position:absolute;
-        padding-left:3rem;
-        top:50%;
-        transform:translateY(-50%);
-    }
-    <?=$canvasContainer;?> .type-shine:after,
-    <?=$canvasContainer;?> .type-chrome:after{
-        content:"";
-        position: absolute;
-        width:100%;
-        top:0;
-        left:0;
-        height: 100%;
-        background: rgb(255,255,255);
-        background: linear-gradient(37deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.2049194677871149) 10%, rgba(255,255,255,0) 37%, rgba(255,255,255,0.6334908963585435) 60%, rgba(255,255,255,0) 85%);
-
-    }
-    <?=$canvasContainer;?> .type-chrome:after{
-        background: rgb(255,255,255);
-        background: linear-gradient(37deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.46262254901960786) 35%, rgba(255,255,255,0) 55%, rgba(255,255,255,0.6334908963585435) 75%, rgba(255,255,255,0) 85%);
-    }
-    <?=$canvasContainer;?> .dc-canvas-gui {
-        width: calc(100% - 1rem);
-        padding-left: 0.5rem;
-    }
-    <?=$canvasContainer;?> .hidden{
-        display:none !important;
-    }
-    <?=$canvasContainer;?> .dc-sidebar{
-                             background: white;
-    }
-    <?=$canvasContainer;?> .dc-sidebar.open-select{
-    }
-    <?=$canvasContainer;?> .dc-sidebar .dc-sidebar-overlay {
-        display:none;
-    }
-    <?=$canvasContainer;?> .dc-sidebar.open-select .dc-sidebar-overlay,
-    <?=$canvasContainer;?> .dc-sidebar-info-text
-    {
-        background: rgba(0,0,0,0.7);
-        display:block;
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
-        height: 100%;
-        z-index: 8;
-    }
-    <?=$canvasContainer;?> .dc-sidebar-info-text .inner{
-        position: absolute;
-        width: 80%;
-        height:80%;
-        overflow:auto;
-        left:10%;
-        top:10%;
-        background:white;
-        padding:1rem;
-    }
-    <?=$canvasContainer;?> .dc-sidebar-info-text .inner .text-container {
-                             position: absolute;
-                             width: 90%;
-                             height: 80%;
-                             overflow: auto;
-                             top: 10%;
-                         }
-    <?=$canvasContainer;?> label{
-        margin-bottom:.5rem;
-        display: block;
-    }
-    <?=$canvasContainer;?> .dc-swiper-symbol {
-        position: absolute;
-        left: 0.5rem;
-        top: 50%;
-        transform: translateY(-50%);
-        width: 2rem;
-        height: 2rem;
-        display: block;
-        border-radius: 50%;
-        overflow: hidden;
-        padding: 0;
-    }
-    <?=$canvasContainer;?> .dc-swiper-symbol .inner{
-        width:100%;
-        height:100%;
-        left:0;
-        top:50%;
-        position:absolute;
-    }
-    <?=$canvasContainer;?> .dc-babylonjs-legend-controll{
-        position:absolute;
-        z-index: 2;
-        left:50%;
-        transform:translateX(-50%);
-        bottom: 2rem;
-        pointer-events: none;
-    }
-    <?=$canvasContainer;?> .dc-babylonjs-legend-controll img{
-        max-width: 88px;
-    }
-
-    <?=$canvasContainer;?> .dc-checkbox-container{
-        height: 50px;
-        vertical-align: middle;
-        position:relative;
-        cursor: pointer;
-    }
-    <?=$canvasContainer;?> .dc-checkbox-container span{
-        position:absolute;
-        top:50%;
-        transform:translateY(-50%);
-        left:0rem;
-        padding-left:3rem;
-        width:100%;
-    }
-    <?=$canvasContainer;?> .dc-checkbox-container.checked .unchecked-image{
-        display:none;
-    }
-    <?=$canvasContainer;?> .dc-checkbox-container.checked .checked-image{
-        display:block;
-    }
-    <?=$canvasContainer;?> .dc-checkbox-container.unchecked .checked-image{
-        display:none;
-    }
-    <?=$canvasContainer;?> .dc-checkbox-container.unchecked .unchecked-image{
-        display:block;
-    }
-    <?=$canvasContainer;?> .dc-checkbox-container input{
-        display:none;
-    }
-    <?=$canvasContainer;?> .dc-checkbox-container .dc-image-container{
-        position:absolute;
-        top:50%;
-        transform:translateY(-50%);
-        width:2rem;
-        height:2rem;
-        left:.5rem;
-        overflow: hidden;
-        border-radius: 50%;
-    }
-    <?=$canvasContainer;?> .dc-checkbox-container .dc-image-container img{
-        position:absolute;
-        width:100%;
-        height: auto;
-        left:50%;
-        top:50%;
-        transform:translate(-50%,-50%);
-    }
-    <?=$canvasContainer;?> .dc-btn-close.close-dc-select {
-        top: -8px !important;
-        background: none !important;
-        color: white !important;
-        right: 1rem !important;
-                             -webkit-box-shadow: none !important;
-                             box-shadow: none !important;
-    }
-    <?=$modalContainerCopy;?>.fadeIn,
-    <?=$modalContainer;?>.fadeIn {
-        visibility: visible;
-        opacity: 1;
-        transition: visibility 0s, opacity 0.5s linear;
-    }
-    <?=$modalContainerCopy;?> .dc-modal-content.modal-added,
-    <?=$modalContainer;?> .dc-modal-content.modal-added
-    <?=$mainContainer;?> .dc-modal-content.modal-added{
-        z-index: 10012 !important;
-    }
-    .dc-modal-active{
-        overflow: hidden;
-    }
-    <?=$canvasContainer;?>  .dc-sidebar-gui-scroll-container{
-                              padding: 1rem;
-                              overflow: auto;
-                              max-height: 100%;
-                              display: block;
-                              width: calc(100% - 1rem);
-                          }
-
-    @media screen and (max-width: 768px) {
-    <?=$canvasContainer;?> .dc-scroll-container > label{
-        color: #fff;
-        margin-top: -3rem;
-        position: relative;
-        background: rgba(0,0,0,.5);
-        padding: 1rem;
-        border-radius: 15px;
-        height: 130%;
-    }
-    <?=$canvasContainer;?> .dc-btn-close.close-dc-select {
-            top: 8px !important;
-        }
-        <?=$canvasContainer;?> .desktop {
-            display:none;
-        }
-
-        <?=$canvasContainer;?> .mobile {
-             display:block;
-         }
-          <?=$canvasContainer;?> .dc-babylonjs-legend-controll img{
-              max-width: 50px;
-          }
-          <?=$canvasContainer;?> .dc-canvas3d-container{
-              /*overflow: hidden;*/
-              /*box-shadow: 9px 9px 42px #f0f0f0, -9px -9px 42px #fff;*/
-              /*position: relative;*/
-              width:100%;
-              padding-top: 120%;
-          }
-        <?=$canvasContainer;?>  .dc-sidebar-gui-scroll-container{
-
-              max-height: 40vh;
-      }
-    }
-    @media screen and (min-width: 769px) {
-        <?=$canvasContainer;?> .desktop {
-            display:block;
-        }
-
-        <?=$canvasContainer;?> .mobile {
-             display:none;
-         }
-    }
-
-</style>
-<div id="<?=str_replace('#','',$mainContainer);?>">
-
-<!--    <div id="--><?//=str_replace('#','',$modalContainer);?><!--" class=" dc-modal">-->
-<!--        <div class="dc-modal-content-container">-->
-<!--            <div class="inner">-->
-<!--                <a class="dc-btn-close">-->
-<!--                    &#10006;-->
-<!--                </a>-->
-<!--                <div class="dc-modal-content">-->
-<!---->
-<!--                </div>-->
-<!--                <div class="dc-modal-image-container">-->
-<!--                    <div class="dc-image-container">-->
-<!--                        <img class="dc-renderimage" src=""/>-->
-<!--                    </div>-->
-<!--                    <a class="dc-download">Download</a>-->
-<!--                </div>-->
-<!--            </div>-->
-<!--        </div>-->
-<!--    </div>-->
-
-    <div id="<?=str_replace('#','',$canvasContainer);?>">
-
-        <?php if($enableInteractButton){ ?>
-        <div class="dc-viewer-controller">
-            <a class="dc-viewer-interaction">
-                <img class="dc-icondeactivated" src="bundles/contaobabylonjsviewer/images/3D-interact-1.png">
-                <img class="dc-iconactivated" src="bundles/contaobabylonjsviewer/images/3D-interact-2.png">
-            </a>
-        </div>
-        <?php } ?>
-        <div class="row">
-            <div class="col-12 paste-dc-canvas-container <?php if($enableGuiVisibility || $enableGuiAnimations || $enableGuiSelect){ echo "col-md-9"; }?>">
-                <div class="dc-viewer-flap"></div>
-                <div class="dc-canvas3d-container">
-                    <div class="dc-loading-container">
-                        <div class="lds-ring"><div></div><div></div><div></div><div></div></div>
-                    </div>
-
-                    <canvas class="dc-canvas-3d" style="width:100%;height:100%;"  touch-action="none"></canvas>
-
-                    <div class="dc-babylonjs-controller-container controller-container-left">
-                        <a class="dc-babylonjs-controller dc-ctrl-screenshot" title="take screenshot">take screenshot</a>
-                        <a class="dc-babylonjs-controller dc-ctrl-reset" title="stop/play autorotate">stop play autorotate</a>
-                    </div>
-                    <div class="dc-babylonjs-controller-container controller-container-right">
-                        <a class="dc-babylonjs-controller dc-ctrl-fullscreen" title="fullscreen toggle">Fullscreen toggle</a>
-                    </div>
-                    <div class="dc-babylonjs-legend-controll">
-                        <img class="desktop" src="./bundles/contaobabylonjsviewer/images/dc-nav-desktop.png" >
-                        <img class="mobile" src="./bundles/contaobabylonjsviewer/images/dc-nav-mobile.png" >
-                    </div>
-                </div>
-            </div>
-            <div class="col-12 dc-sidebar <?php if($enableGuiVisibility || $enableGuiAnimations || $enableGuiSelect){ echo "col-md-3"; }?>">
-
-                <div class="dc-sidebar-overlay"></div>
-                <div class="dc-sidebar-info-text hidden">
-
-                    <div class="inner">
-                        <a class="dc-btn-close">
-                            &#10006;
-                        </a>
-                        <div class="text-container">
-
-                        </div>
-                    </div>
-                </div>
-                <div class="dc-sidebar-gui-scroll-container">
-                    <?php /*if($enableGuiVisibility){?>
-                        <div class="container-checkbox">
-                            <h3 class="headline">
-                                Show Hide Elements
-                            </h3>
-                            <div id="" class="checkbox-container checkbox-container">
-                            </div>
-                        </div>
-                    <?php }*/ ?>
-                    <?php if($enableGuiAnimations){?>
-                        <div class="container-animations">
-                            <h3 class="headline">
-                                Play/Stop Animations
-                            </h3>
-                            <div class="animation-container checkbox-container">
-                            </div>
-                        </div>
-                    <?php } ?>
-                    <?php if($enableGuiSelect){?>
-                        <div class="dc-container-select-boxes">
-
-                            <?php if( $this->headline){ ?>
-                                    <<?= $this->hl; ?>><?= $this->headline; ?></<?= $this->hl; ?>>
-                            <?php } ?>
-                            <div class="select-container checkbox-container">
-                            </div>
-                        </div>
-                    <?php } ?>
-                </div>
-            </div>
+    <div class="canvas-placeholder">
+        <div id="<?=str_replace('#','',$mainContainer);?>" class="canvas-container">
+            <canvas class="dc-canvas-3d" style="width:100%;height:100%;"   touch-action="none"></canvas>
         </div>
     </div>
 
     <script type="module">
-        if(typeof window.dcBabylonJsResolver === 'undefined' || (!window.dcBabylonJsResolver && !window.dcBabylonJsResolver.isFulfilled()  && !window.dcBabylonJsResolver.isPending()) ){
-            /**
-             * This function allow you to modify a JS Promise by adding some status properties.
-             * Based on: http://stackoverflow.com/questions/21485545/is-there-a-way-to-tell-if-an-es6-promise-is-fulfilled-rejected-resolved
-             * But modified according to the specs of promises : https://promisesaplus.com/
-             */
-            function MakeQuerablePromise(promise) {
-                // Don't modify any promise that has been already modified.
-                if (promise.isFulfilled) return promise;
-
-                // Set initial state
-                var isPending = true;
-                var isRejected = false;
-                var isFulfilled = false;
-
-                // Observe the promise, saving the fulfillment in a closure scope.
-                var result = promise.then(
-                    function(v) {
-                        isFulfilled = true;
-                        isPending = false;
-                        return v;
-                    },
-                    function(e) {
-                        isRejected = true;
-                        isPending = false;
-                        throw e;
-                    }
-                );
-
-                result.isFulfilled = function() { return isFulfilled; };
-                result.isPending = function() { return isPending; };
-                result.isRejected = function() { return isRejected; };
-                return result;
-            }
-            var checkpromise = import('./bundles/contaobabylonjsviewer/js/duncrow-bjs-viewer.min.js').then((DSB) => {
-                let viewer = new DSB.DCBabylonJsViewer();
-
-                viewer.loadingFinished = (canvasId) =>{
-
-                }
-                viewer.loadingStarted = (canvasId) =>{
-
-                }
-
-                return {viewer, DSB};
-            });
-
-            window.dcBabylonJsResolver = MakeQuerablePromise(checkpromise);
-        }
+        const jsPath = './bundles/contaobabylonjsviewer/js/duncrow-bjs-viewer.min.js'; 
+        if(void 0===window.dcBabylonJsResolver||!window.dcBabylonJsResolver&&!window.dcBabylonJsResolver.isFulfilled()&&!window.dcBabylonJsResolver.isPending()){
+            function MakeQuerablePromise(e){if(e.isFulfilled)return e;var n=!0,i=!1,r=!1,o=e.then(function(e){return r=!0,n=!1,e},function(e){throw i=!0,n=!1,e});return o.isFulfilled=function(){return r},o.isPending=function(){return n},o.isRejected=function(){return i},o}var checkpromise=import(jsPath).then(e=>{let n=new e.DCBabylonJsViewer;return n.loadingFinished=(e=>{}),n.loadingStarted=(e=>{}),window.addEventListener("click",function(e){e.target.className.toString().includes("dc-selected")||e.target.className.toString().includes("dc-scroll-container")||Array.from(document.querySelectorAll(".dc-scroll-container")).forEach(e=>e.classList.add("hidden"))}),n});window.dcBabylonJsResolver=MakeQuerablePromise(checkpromise)}
     </script>
 
     <script type="module">
-        window.dcBabylonJsResolver.then((viewerDSB) => {
-            const viewer = viewerDSB.viewer;
-            const DSB = viewerDSB.DSB;
+
+        window.dcBabylonJsResolver.then((viewer) => {
             const mainContainer = document.querySelector('<?=$mainContainer;?>');
-            const canvasContainer = document.querySelector('<?=$canvasContainer;?>');
-
-
-
-
-            let cameraSettings = {
-<?php for($i = 0; $i < count($settings); $i++){
-  if(count($settings[$i]) && array_search($settings[$i][0], $cameraSettings) !== false){ ?>
-<?= $settings[$i][0] ?> : <?= (str_contains($settings[$i][0],'Color'))?'new BABYLON.Color3'.$settings[$i][1]:$settings[$i][1] ?>,
-<?php }
-} ?>
-            };
-            let environmentSettings = {
-<?php for($i = 0; $i < count($settings); $i++){
-if(count($settings[$i]) && array_search($settings[$i][0], $environmentSettings) !== false){ ?>
-<?= $settings[$i][0] ?> : <?= (str_contains($settings[$i][0],'Color'))?'new BABYLON.Color3'.$settings[$i][1]:$settings[$i][1] ?>,
-<?php }
-} ?>
-            }
-            let loadAssetPaths = [<?php for($i = 0; $i < count($objFile); $i++){ echo "'".$objFile[$i][0]."',"; } ?>];
-            <?php if( $this->code){ echo $this->code; } ?>
-
-            function highlightObject(parameters) {
-            }
-            let highlightcolor = <?= $highlightColor; ?>;
-            let scene = viewer.addScene(canvasContainer.querySelector('.dc-canvas-3d'),"<?=$canvasContainer?>", loadAssetPaths,cameraSettings,environmentSettings,false <?php if($activateMeshSelection){ ?>, {callback: highlightObject, selectionOutlineColor: highlightcolor <?php if($zoomSelectedMesh){ ?> ,zoomSelectedMesh:false<?php } ?> }<?php }else{ ?>, {} <?php } ?>, <?=(($sceneEnvironmentTextur)?"'".$sceneEnvironmentTextur."'":'')?>);
-
-            window.addEventListener('mousedown', (e) => {
-                if (e.target.closest('<?=$mainContainer;?>')
-                    && (
-                        !e.target.className.toString().includes('dc-selected')
-                        && !e.target.className.toString().includes('dc-scroll-container')
-                        && !e.target.className.toString().includes('swiper-slide')
-                        && !e.target.closest('.swiper-slide')
-                        && !e.target.closest('.dc-scroll-container')
-                        && !e.target.closest('.dc-selected')
-                    )
-                ){
-                    Array.from(canvasContainer.querySelectorAll('.dc-scroll-container')).forEach(x=>x.classList.add('hidden'));
-                    Array.from(canvasContainer.querySelectorAll('.dc-sidebar')).forEach(x=>x.classList.remove('open-select'));
-                    scene.deactivateInfoPoints();
-
-                }
-            });
-
-                scene.loadingFinished.then(()=>{
-
-                    if(scene.scene.cameras.length > 1){
-                        scene.scene.switchActiveCamera(scene.scene.cameras[0]);
-
-                        // scene.scene.switchActiveCamera(scene.scene.cameras[0]);
-                        // scene.scene.animationGroups.filter(x=>x.name.includes('camera_')).forEach(aniGroup => {
-                        //
-                        //     aniGroup.targetedAnimations.forEach(tarAni => {
-                        //         // aniGroup.addTargetedAnimation(tarAni.animation, scene.scene.activeCamera);
-                        //         tarAni.target = scene.scene.activeCamera;
-                        //     })
-                        // });
-                        // var aniGroup = scene.scene.animationGroups[1];
-                        //
-                        // aniGroup.addTargetedAnimation(aniGroup.targetedAnimations[0].animation, scene.scene.activeCamera);
-                        // aniGroup.addTargetedAnimation(aniGroup.targetedAnimations[1].animation, scene.scene.activeCamera);
-                        // aniGroup.addTargetedAnimation(aniGroup.targetedAnimations[2].animation, scene.scene.activeCamera);
-                        console.log(scene, scene.scene.activeCamera);
+            let dcbjsGui;
+            let scene; 
+            let webshopBasketButtonCanvas; 
+            let priceContainer; 
+            let accordionJson = ""; 
+            let guiJson = ""; 
+            
+            /**
+             * init Variables
+             */
+            let highlightcolor = new BABYLON.Color3(0.4,0.2,0.6); 
+            
+            <?php if (count($objFileCameraSettings)){
+                ?>
+                let cameraSettings = "<?= $objFileCameraSettings[0][0] ?>"; 
+            <?php  } else { ?>
+                let cameraSettings = {
+                    <?php /** $rotationBehaviour ==  'rotate-none' 'rotate-auto' 'rotate-once' */
+                    if(!isset($rotationBehaviour)){
+                        ?> useAutoRotationBehavior : true, <?php 
                     }
-                    <?php if( $blackList){ ?>
+                    else{
+                        if(isset($rotationBehaviour) && $rotationBehaviour == 'rotate-auto'){
+                            ?> useAutoRotationBehavior : true, <?php 
+                        }
+                        if(isset($rotationBehaviour) && $rotationBehaviour == 'rotate-none'){
+                            ?> useAutoRotationBehavior : false, <?php 
+                        }
+                        if(isset($rotationBehaviour) && $rotationBehaviour == 'rotate-once'){
+                            ?>  
+                            zoomStopsAnimation : true,
+                             <?php 
+                        }
+                    }
+                    ?>
+                    rotationSpeed:0.2,
+                    minZ: 0.01,
+                    maxZ: 10000,
+                    minZoom: 0.5,
+                    maxZoom: 1.5
+                }; 
+            <?php  }  ?>    
+            <?php if (count($objFileEnvironmentSettings)){
+                ?>
+                let environmentSettings = "<?= $objFileEnvironmentSettings[0][0] ?>"; 
+            <?php  }else{ ?>
+                let environmentSettings = {
+                    backgroundColor : new BABYLON.Color4(0.9529, 0.9529, 0.9529,1),
+                    createGround : false,
+                    createSkybox : false,
+                    <?php /** $rotationBehaviour ==  'rotate-none' 'rotate-auto' 'rotate-once' */
+                    if(isset($environmentToCameraRotation)){
+                        if($environmentToCameraRotation){
+                            ?> cameraRotateEnvironment : true, <?php 
+                        }
+                    }
+                    ?>
+                    
+                }
+            <?php }  ?>
+
+            
+            /**
+             * init Functions
+             */
+            function meshClicked(parameters) {
+                console.log('parameters: ', parameters); 
+                if(dcbjsGui){
+                    dcbjsGui.hideButtons('mouseIconRotate'); 
+                    <?php 
+                    if(isset($rotationBehaviour) && $rotationBehaviour == 'rotate-once'){
+                        ?> 
+                        if(scene && typeof scene.camera !== 'undefined'){
+                            scene.camera.camera.useAutoRotationBehavior = false;
+
+                            // scene.camera.camera.autoRotationBehavior.zoomStopsAnimation = true; 
+                            scene.camera.camera.useFramingBehavior = false; 
+                            // scene.camera.camera.framingBehavior.zoomStopsAnimation = true; 
+                         } <?php 
+                    }
+                    ?>
+                    dcbjsGui.showButtons('info'); 
+                }
+            }
+            function clickedGui(parameters) {
+                console.log('GUI CLick: ', parameters, scene); 
+				if(dcbjsGui){
+					dcbjsGui.resetAccordion();
+				}
+                if(parameters.type == 'material'){
+                    scene.changeMaterial(parameters.id.split(','), "<?= ($objFileMaterialPrefix)?$objFileMaterialPrefix:$objFilePrefix ?>"+parameters.value); 
+                }
+                if(parameters.type == 'toggle'){
+                    if(parameters.value == 'hidden'){
+                        toggle(parameters, false); 
+                    }else{
+                        toggle(parameters, true); 
+                    }
+                    
+                }
+                // if(parameters.type == 'button' && parameters.value == 'fullscreen'){
+                //     if(!scene.isFullscreen){
+                //         viewer.openModal(scene,'fullscreen','',false);
+                //     }else{
+                //         viewer.closeModal(); 
+                //     }
+                // }
+                if(parameters.type == 'button' && parameters.value == 'screenshot'){
+                    if(typeof dcbjsGui === 'undefined' || !dcbjsGui){
+                        viewer.openModal(scene,'screenshot',null , '',true, true); 
+                    }else{
+                        if(!dcbjsGui.isFullscreen()){
+                            viewer.openModal(scene,'screenshot',null , '',true, true); 
+                        }else{
+                            viewer.openModal(scene,'screenshot',scene.sceneContainer, '',false, true); 
+                        }
+                    }
+                    
+                }
+                if(parameters.type == 'button' && parameters.value == 'info' && typeof dcbjsGui !== 'undefined'){
+                    dcbjsGui.showButtons('mouseIconRotate'); 
+                    dcbjsGui.hideButtons('info'); 
+                }
+                if(parameters.type == 'button' && parameters.value == 'camera-reset'){
+                    scene.camera.resetCamera(); 
+                }
+                if(parameters.type == 'button' && (parameters.value == 'menu' || parameters.value == 'menu-mobile')){
+                    toggleMenuEvent(!dcbjsGui.isNaviagtionHidden); 
+                }
+                if(parameters.type == 'switchObject'){
+                    scene.showOnlyMesh(parameters.value); 
+                }
+                // scene.camera.zoomOnMeshes(); 
+
+                <?php if($enableWebshop){ ?>
+                    let defaultPrice = <?= $webshopStartPrice ?>; 
+                    let prices = mainContainer.querySelectorAll('.dc-accordion-material-item.active .dc-price'); 
+                    prices.forEach(price => {
+                        defaultPrice = Number(defaultPrice) + Number(price.innerHTML); 
+                    });
+                    console.log('price: ', defaultPrice); 
+                    priceContainer.innerHTML = defaultPrice; 
+
+                <?php } ?>
+            }
+            function toggle(parameters, overriteIsVisible = null){
+                let isVisible = scene.toggleMeshVisibility(parameters.id.split(','), overriteIsVisible); 
+                    // dcbjsGui.toggle(parameters.id, !isVisible ); 
+
+                    if(isVisible){
+                        scene.changeInfoMarkerImageSpritePosition(parameters.id, 1); 
+                    }else{
+                        scene.changeInfoMarkerImageSpritePosition(parameters.id, 3); 
+                    }
+            }
+            function markerClicked(parameters) {
+                console.log('Marker Clicked: ', parameters); 
+                
+                if(dcbjsGui && parameters.type == 'toggleMarkers'){
+                    toggle(parameters); 
+                    dcbjsGui.toggle(parameters.id);      
+                }else{
+                    dcbjsGui.toggleAccordionActive('',parameters.id); 
+                    toggleMenuEvent(!dcbjsGui.isNaviagtionHidden); 
+                }
+            }
+            function accordionCreationFinisehd(gui) {
+                dcbjsGui.hideButtons('info'); 
+
+                if(accordionJson && gui && typeof gui.accordion !== 'undefined'){
+                    let accordionMainContainer = gui.accordion.accordionMainContainer.element; 
+                    accordionMainContainer.style.transform = 'translate(-10000px,-10000px)'; 
+                    accordionMainContainer.style.width = accordionMainContainer.offsetWidth; 
+
+                    
+                    let parent = accordionMainContainer.parentNode;
+                    let body = document.querySelector('body'); 
+                    body.prepend(accordionMainContainer); 
+                    setTimeout(() => {
+                        gui.resetAccordion();
+                        setTimeout(() => {
+                            parent.prepend(accordionMainContainer);
+                            accordionMainContainer.style.transform = null; 
+                            accordionMainContainer.style.width = null; 
+                        
+                        }, 5);
+                    }, 5);
+                }
+                
+            }
+            function toggleMenuEvent(mobileSwitchIsHidden) {
+                console.log('mobile switch', mobileSwitchIsHidden); 
+                if(accordionJson){
+                    if(mobileSwitchIsHidden){
+                        scene.canvas.classList.add('width-66');
+                    }else{
+                        scene.canvas.classList.remove('width-66');
+                    }
+                }
+                viewer.resize(); 
+            }; 
+            
+            /**
+             * init Scene
+             */
+            
+            let loadAssetPaths = [<?php for($i = 0; $i < count($objFileMaterial); $i++){ echo "'".$objFileMaterial[$i][0]."',"; } ?> <?php for($i = 0; $i < count($objFile); $i++){ echo "'".$objFile[$i][0]."',"; } ?> ];
+            scene = viewer.addScene(mainContainer.querySelector('.dc-canvas-3d'), "<?=$mainContainer?>",".canvas-placeholder" ,loadAssetPaths,cameraSettings,environmentSettings, {callback: meshClicked, selectionOutlineColor: highlightcolor,zoomSelectedMesh:false }, <?=(($sceneEnvironmentTextur)?"'".$sceneEnvironmentTextur."'":'')?>); 
+            
+            <?php if($backgroundColor){ ?>
+                scene.overwriteBackgroundColor =<?= $backgroundColor; ?>; 
+            <?php }?>
+            // viewer.switchViewModusToSingle(scene.canvas);
+            // scene.loadSceneFiles(); 
+            scene.sceneReady.then(()=>{
+                scene.loadSceneFiles(); 
+            });
+            // viewer.loadScene(scene); 
+            
+
+            scene.loadingFinished.then(() => {
+                viewer.loadScene(scene);
+                scene.changeGlassMaterial(); 
+                var blackListArray = ["<?=$objFileMaterialPrefix ?>"];
+                scene.blacklist = [...new Set([...blackListArray])];
+
+                // scene.camera.zoomOnMeshes(); 
+
+                <?php if( $showOnlyMeshlist){ ?>
+                    var showOnlyMeshListString = "<?= $showOnlyMeshlist ?>";
+                    var showOnlyMeshListArray = showOnlyMeshListString.split(',');
+                    if(showOnlyMeshListArray.length){
+                        scene.showOnlyMesh(showOnlyMeshListArray); 
+                    }
+                    
+                <?php } ?>
+
+                <?php if( $blackList){ ?>
                     var blackListString = "<?= $blackList ?>";
                     var blackListArray = blackListString.split(',');
                     blackListArray.forEach(meshName =>{
@@ -1069,12 +422,24 @@ if(count($settings[$i]) && array_search($settings[$i][0], $environmentSettings) 
                     })
                     scene.blacklist = [...new Set([...blackListArray,...["__root__"]])];
                     <?php } ?>
-                    <?php if( $focusOnHelperName){ ?>
-                    var helperName = "<?=$focusOnHelperName;?>";
-                    var blackListString = "<?= $focusOnHelperName ?>";
-                    var blackListArray = blackListString.split(',');
-                    scene.blacklist = [...new Set([...blackListArray,...["__root__"]])];
-                    <?php } ?>
+                    <?php 
+                    
+                    // $objFileMaterialPrefix
+                    //for($i = 0; $i < count($objFileMaterial); $i++){ echo "'".$objFileMaterial[$i][0]."',"; } ?>
+                    <?php if( $objFileMaterialPrefix){ ?>
+                    // var blackListArray = ["<?=$objFileMaterialPrefix ?>"];
+                    // blackListArray.forEach(meshName =>{
+                    //     scene.scene.meshes.forEach(mesh =>{
+                    //         if(mesh.id.includes(meshName)){
+                    //             mesh.isVisible = false;
+                    //         }
+                    //     })
+                    // })
+                    // var blackListArray = ["<?=$objFileMaterialPrefix ?>"];
+                    // scene.blacklist = [...new Set([...blackListArray,...["__root__"]])];
+                    <?php } 
+                    
+                    ?>
 
 
                     <?php if( $toggleVisibilityList){ ?>
@@ -1083,450 +448,75 @@ if(count($settings[$i]) && array_search($settings[$i][0], $environmentSettings) 
                     scene.whitelist = [...new Set([...whiteListArray,...["__root__"]])];
                     <?php } ?>
 
+                    
+                <?php if(count($objFileMarkerJson)){ ?>
+                    scene.loadMarkersJson("<?= $objFileMarkerJson[0][0] ?>", markerClicked); 
+                <?php } ?>
+                
+                
+                <?php if(count($objFileAccordionSettings)){?> 
+                    accordionJson = "<?= $objFileAccordionSettings[0][0] ?>";
+                <?php }
+                if(count($objFileGuiSettings)) { ?> 
+                    guiJson = "<?= $objFileGuiSettings[0][0] ?>";
+                <?php  } ?>
 
-                    var loadingContainer = canvasContainer.querySelector('.dc-loading-container');
-                    loadingContainer.classList.add('hidden');
-
-
-                    <?php
-                    if($focusOnHelperName){ ?>
-
-                    addInfopoints();
-
-
-                    <?php } ?>
-                    <?php /*if($enableGuiVisibility){?>
-                        scene.addGui("checkbox-container",<?=$this->id;?>, '',  0, '' );
-                        //var gui = new DSB.DCGui(viewer, "checkbox-container-<?//=$this->id;?>//",<?//=$this->id;?>//,  DSB.DCGuiModel.ShowHideElements );
-                    <?php }*/ ?>
-                    <?php if($enableGuiSelect){?>
-
-                    if(typeof options !== 'undefined' && options.length){
-
-                        for(var i = 0; i< options.length; i++){
-                            var containerId = "select-container";
-                            let selectId = "e"+i;
-                            scene.addGui(canvasContainer.querySelector('.dc-sidebar-gui-scroll-container'), selectId, DSB.DC_GUI_TYPE.CustomElements, options[i], (swiperId)=>{
-                                var elem = canvasContainer.querySelector('.dc-sidebar-info-text');
-                                elem.classList.add("hidden");
-
-                                var controllerType = swiperId.getAttribute('dc-controll-type');
-                                var controllerId =swiperId.getAttribute('dc-controll-id');
-                                if(swiperId.className.includes('checkbox')){
-                                    if(swiperId.className.includes('unchecked')){
-
-                                        scene.deactivateInfoPoints();
-                                    }else{
-                                        scene.activateInfoPoints(controllerType, controllerId);
-                                    }
-                                }else{
-                                    initSwiperSlider(swiperId);
-                                    canvasContainer.querySelector('.dc-sidebar').classList.add('open-select');
-
-                                    scene.activateInfoPoints(controllerType, controllerId);
-                                }
-
-
-                            });
-                            var element = canvasContainer.querySelector('.dc-scroll-main-container-'+selectId+' .swiper-slide');
-                            if(element){
-                                var elementSelected = canvasContainer.querySelector('.dc-scroll-main-container-'+selectId+' .dc-selected');
-
-                                if(element && elementSelected) {
-                                    elementSelected.innerHTML = element.innerHTML;
-                                }
-                            }
-                        }
+                /*
+                <?php var_export( $buttonsGuiDefault); ?>
+                */
+                let useDefaultGui = "<?= $buttonsGuiDefault?"true":"" ?>";
+                let guiJsonDefault = null; 
+                if(!guiJson && useDefaultGui){
+                    guiJsonDefault = {
+                    "buttonsPosition":{
+                        "leftTop":["share","screenshot","cameraReset", "info"],
+                        "rightTop":["fullscreen","menu"],
+                        "centerBottom":["mouseIconRotate"]
+                    },
+                    "accordionPosition":{
+                        "tap":["menuMobile"],
+                        "centerTop":[ "mouseIconRotate"]
                     }
-                    <?php } ?>
-                    <?php if($enableGuiAnimations){?>
-                    var optionsAnimation = {
-                        animationGroup : [
-                            {
-                                cameraName : "camera_step1",
-                                animationGroups : ['chargingCard_slideIn', 'camera_step1']
-                            },
-                            {
-                                cameraName : 'camera_step2',
-                                animationGroups : ['chargingHatch_open','chargingCable_plugIn', 'camera_step2']
-                            },
-                         ]
-
-                    };
-                    scene.addGui(canvasContainer.querySelector(".animation-container"),<?=$this->id;?>,DSB.DC_GUI_TYPE.AnimationElements, optionsAnimation);
-                    //var gui = new DSB.DCGui(viewer, "animation-container-<?//=$this->id;?>//",<?//=$this->id;?>//,  DSB.DCGuiModel.AnimationElements );
-                    <?php } ?>
-
-                    scene.scene.meshes[0].material =scene.scene.meshes[1].material;
-                    scene.engine.resize();
-                });
-                scene.loadingStarted.then(()=>{
-                    var loadingContainer = canvasContainer.querySelector('.dc-loading-container');
-                    loadingContainer.classList.remove('hidden');
-                });
-
-
-            var addInfopoints = () => {
-                var focusImagePath = [
-                    {
-                        imagePath:"./bundles/contaobabylonjsviewer/images/polymode__icon-circle-palette.png",
-                        meshNamePattern: "dc-helper-zoom-color"
-                    },
-                    {
-                        imagePath:"./bundles/contaobabylonjsviewer/images/polymode__icon-circle-palette.png",
-                        meshNamePattern: "dc-helper-color"
-                    },
-                    {
-                        imagePath:"./bundles/contaobabylonjsviewer/images/polymode__icon-circle-ear.png",
-                        meshNamePattern: "dc-helper-zoom-ear"
-                    },
-                    {
-                        imagePath:"./bundles/contaobabylonjsviewer/images/polymode__icon-circle-ear.png",
-                        meshNamePattern: "dc-helper-ear"
-                    },
-                    {
-                        imagePath:"./bundles/contaobabylonjsviewer/images/polymode__icons_icon-circle-eye.png",
-                        meshNamePattern: "dc-helper-zoom-visibility"
-                    },
-                    {
-                        imagePath:"./bundles/contaobabylonjsviewer/images/polymode__icons_icon-circle-eye.png",
-                        meshNamePattern: "dc-helper-visibility"
-                    },
-                    {
-                        imagePath:"./bundles/contaobabylonjsviewer/images/polymode__icon-circle-info.png",
-                        meshNamePattern: "dc-helper-zoom-info"
-                    },
-                    {
-                        imagePath:"./bundles/contaobabylonjsviewer/images/polymode__icon-circle-info.png",
-                        meshNamePattern: "dc-helper-info"
-                    },
-
-                    {
-                        imagePath:"./bundles/contaobabylonjsviewer/images/polymode__icon-circle-info.png",
-                        meshNamePattern: "dc-helper-zoom"
-                    },
-                ];
-                var infopointOptions = {
-                    width:60,
-                    height:60,
-                    zoom: ['dc-helper-zoom'],
-                    visibility: ['dc-helper-visibility', 'dc-helper-zoom-visibility'],
-                    color:["dc-helper-color", "dc-helper-zoom-color"],
-                    info: ["dc-helper-info", "dc-helper-zoom-info"]
                 }
-                scene.addInfopoints("<?= $focusOnHelperName ?>", focusImagePath, <?= $focusRadius ?>, infopointOptions);
-                scene.clickedInfopoint = (returnObject) => {
-                    var attrName = returnObject.targetMeshId;
-                    if(returnObject.type.includes(DSB.DC_INFOPOINTS_TYPE.visibility)){
-
-
-
-                        var visibilityElement = canvasContainer.querySelector('[dc-controll-type="visibility"][dc-controll-id="'+attrName+'"] .dc-checkbox-container');
-                        var inputElement = visibilityElement.querySelector('input');
-                        if(visibilityElement.className.includes('unchecked')){
-                            visibilityElement.classList.remove('unchecked');
-                            visibilityElement.classList.add('checked');
-                            inputElement.checked = true;
-                        }else {
-                            visibilityElement.classList.remove('checked');
-                            visibilityElement.classList.add('unchecked');
-                            inputElement.checked = false;
-                        }
-                        if(!scene.scene.getMeshById(attrName)){
-                            var checkVisibilityObjects = canvasContainer.querySelector('[dc-controll-type="visibility"][dc-controll-id="'+attrName+'"] .dc-checkbox-container input');
-                            var meshes = checkVisibilityObjects.getAttribute('dc-target')?.split(',');
-                            if(typeof meshes !== 'undefined' && meshes.length){
-                                meshes.forEach(meshName => {
-                                    scene.scene.getMeshById(meshName).isVisible = inputElement.checked;
-                                })
-                            }
-                        }
-
-
-                    }
-                    if(attrName && returnObject.type.includes(DSB.DC_INFOPOINTS_TYPE.color)){
-                        var elem = canvasContainer.querySelector('.dc-sidebar-info-text');
-                        elem.classList.add("hidden");
-                        if(scene.gui){
-                            scene.gui.openGuiSlider(attrName, "color", (swiperId)=>{
-
-                                initSwiperSlider(swiperId);
-                                canvasContainer.querySelector('.dc-sidebar').classList.add('open-select');
-                            });
-                        }
-                    }
-                    if(returnObject.type.includes(DSB.DC_INFOPOINTS_TYPE.info)){
-                        if(typeof returnObject.targetMeshId !== 'undefined' && returnObject.targetMeshId ){
-                            Array.from(canvasContainer.querySelectorAll('.dc-scroll-container')).forEach(x=>x.classList.add('hidden'));
-                            Array.from(canvasContainer.querySelectorAll('.dc-sidebar')).forEach(x=>x.classList.remove('open-select'));
-
-                            var elem = canvasContainer.querySelector('.dc-sidebar-info-text');
-                            var textContainer = canvasContainer.querySelector('.dc-sidebar-info-text .inner .text-container');
-                            var findInfoText = info.find(x=>x.id == returnObject.targetMeshId);
-                            if(typeof findInfoText !== 'undefined' && typeof findInfoText.text !== 'undefined'){
-                                textContainer.innerHTML = findInfoText.text;
-                            }
-                            elem.classList.remove("hidden");
-                        }
-
-                    }
-
-
-                };
-            }
-            var resetButton = canvasContainer.querySelector('.dc-ctrl-reset');
-            resetButton.addEventListener('click', async function (event) {
-
-                event.preventDefault();
-                scene.camera.resetCamera();
-                // event.preventDefault();
-                // scene.resetScene();
-                // scene.scene.meshes.forEach(mesh => {
-                //     mesh.isVisible = false;
-                // });
-                // setTimeout(addInfopoints, 300);
-                // // addInfopoints();
-            });
-            var screenshotButton = canvasContainer.querySelector('.dc-ctrl-screenshot');
-            screenshotButton.addEventListener('click', async function (event) {
-                event.preventDefault();
-                // scene,id, headline,fullscreen, takeScreenshot, copyElement,copyElementContainer, copyToContainer,screenshotWidth,screenshotHeight
-                viewer.createModal(scene,"<?=str_replace('#','',$modalContainerCopy);?>","Screenshot",false,true,null,null,canvasContainer.parentNode);
-            //     var imageSrc = await scene.takeScreenshot({width: '1280', height: '720'});
-            //     var image = canvasContainer.querySelector('.dc-renderimage');
-            //     image.src = imageSrc;
-            //     var downloadbutton = canvasContainer.querySelector('.dc-download');
-            //     downloadbutton.href = imageSrc;
-            //     downloadbutton.download = 'screenshot.png';
-            //     fadeModalIn("Screenshot");
-            });
-            //var modal = document.querySelector('<?//=$modalContainer?>//');
-            //var body = document.querySelector('body');
-            //var canvasContainer = document.querySelector('<?//=$canvasContainer;?>//');
-            var fullscreenButton = canvasContainer.querySelector('.dc-ctrl-fullscreen');
-            if(fullscreenButton){
-                // scene,id, headline,fullscreen, takeScreenshot, copyElement,copyElementContainer, copyToContainer,screenshotWidth,screenshotHeight
-                //viewer.createModal(scene,"<?//=str_replace('#','',$modalContainer);?>//-fullscreen","",true,false,canvasContainer,mainContainer);
-                fullscreenButton.addEventListener('click', (event) => {
-                    event.preventDefault();
-                    viewer.createModal(scene,"<?=str_replace('#','',$modalContainer);?>","",true,false,canvasContainer,mainContainer);
-            //         var modalContentContainer = canvasContainer.querySelector('.dc-modal-content-container');
-            //         modalContentContainer.classList.add('fullscreen');
-            //
-            //         var fullscreenContentContainer = canvasContainer.querySelector('.dc-modal-image-container');
-            //         if(canvasContainer && fullscreenContentContainer){
-            //             fullscreenContentContainer.appendChild(canvasContainer);
-            //             setTimeout(()=>{viewer.resize();},40);
-            //         }
-            //         fadeModalIn("",true,(isVisible)=>{});
-            //         body.prepend(modal);
-            //         body.classList.add('dc-modal-active');
-            //         scene.infopointsToggleVisibility(false);
-            //         scene.isFullscreen = true;
-                });
-            }
-
-
-
-            var closeInfoButton = canvasContainer.querySelector('.dc-sidebar-info-text .dc-btn-close');
-            if(closeInfoButton){
-                closeInfoButton.addEventListener('click', function (event) {
-                    var elem = canvasContainer.querySelector('.dc-sidebar-info-text');
-                    elem.classList.add("hidden");
-                    scene.deactivateInfoPoints();
-                });
-            }
-
-            //function fadeModalIn(text = "", fadeIn = true){
-            //    var modal = document.querySelector('<?//=$modalContainer;?>//');
-            //    var modalText = document.querySelector("<?//=$modalContainer;?>// .dc-modal-content");
-            //    if(modalText){
-            //        while (modalText.firstChild) {
-            //            modalText.removeChild(modalText.firstChild);
-            //        }
-            //        modalText.innerHTML = '';
-            //        if(text != ''){
-            //            modalText.innerHTML = '<h3>'+text+'</h3>';
-            //        }
-            //    }
-            //    if(!fadeIn){
-            //        modal.classList.remove('fadeIn');
-            //    }else{
-            //        modal.classList.add('fadeIn');
-            //    }
-            //}
-
-
-            function initSwiperSlider(container){
-                // var initSlideIndex = 0;
-                // var searchText = canvasContainer.querySelector('#'+containerId+' .dc-selected');
-                // var sliderItems = Array.from(canvasContainer.querySelectorAll('#'+containerId+' .swiper-slide'));
-                // var searchItem = sliderItems.find(x=> x.innerText == searchText.innerText);
-                // if(searchItem){
-                //     initSlideIndex = searchItem.getAttribute('data-swiper-slide-index');
-                // }
-
-
-                if(!container.querySelector('.dc-swiper').className.includes('swiper-initialized') &&
-                    !container.querySelector('.dc-swiper').className.includes('swiper-container-initialized')
-                    ){
-                    var closeSelectButton = Array.from(canvasContainer.querySelectorAll('.close-dc-select'));
-                    if(closeSelectButton && closeSelectButton.length){
-                        closeSelectButton.forEach((button) => {
-                            button.addEventListener('click', function (event) {
-                                event.preventDefault();
-
-                                button.closest('.dc-scroll-container').classList.add('hidden');
-                                canvasContainer.querySelectorAll('.dc-sidebar')[0].classList.remove('open-select');
-                                scene.deactivateInfoPoints();
-                            });
-                        });
-                    }
-
-                    var swiper = new Swiper(container.querySelector('.dc-swiper'), {
-                        // Optional parameters
-                        direction: 'vertical',
-                        loop: true,
-                        loopAdditionalSlides: 30,
-
-                        // And if we need scrollbar
-                        // scrollbar: {
-                        //     el: '.dc-swiper-scrollbar',
-                        // },
-                        // initialSlide: initSlideIndex,
-                        slideToClickedSlide : true,
-                        init: false,
-                        speed: 150,
-                        slidesPerView: 5,
-                        loopedSlides: 5,
-                        centeredSlides:true,
-                        grabCursor:true,
-                        mousewheel: {
-                            invert: false,
-                        }
-                    });
-                    swiper.on('slideChangeTransitionEnd', function () {
-                        if(typeof this !== 'undefined'){
-                            this.update(true);
-                        }
-                    });
-                    swiper.on('activeIndexChange', function () {
-
-                        if(typeof this !== 'undefined'){
-                            this.update(true);
-                        }
-
-                        var element = container.querySelector(' .swiper-slide-active');
-                        if(element){
-
-                            var elementSelected = container.querySelector(' .dc-selected');
-
-                            if(element && elementSelected){
-                                elementSelected.innerHTML = element.innerHTML;
-
-                                var actionType = element.getAttribute('dc-type');
-                                var actionTarget = element.getAttribute('dc-target');
-                                var actionTargetSet = element.getAttribute('dc-target-set');
-                                var actionlimitMeshes = element.getAttribute('dc-limitmeshes');
-                                if(typeof actionType !== 'undefined' && actionType == 'material' &&
-                                    typeof actionTarget !== 'undefined' && actionTarget
-                                ){
-
-                                    var material = scene.scene.getMaterialById(actionTarget);
-                                    // material.environmentTexture  = eqTexture;
-                                    // material.microSurface = 0.96;
-                                    if(typeof material !== 'undefined' && material){
-                                        var usedMeshes = scene.usedMeshesList;
-                                        var changeMeshes = []
-                                        if(typeof actionlimitMeshes !== 'undefined' && actionlimitMeshes){
-                                            var limitMeshes = actionlimitMeshes.split(',');
-                                            if(limitMeshes.length){
-                                                limitMeshes.forEach(meshName => {
-                                                    if(meshName.includes('*')){
-                                                        var filteredMesh = usedMeshes.filter(x=> x.includes(meshName));
-                                                        if(filteredMesh.length){
-                                                            changeMeshes = [...new Set([...filteredMesh,...changeMeshes])];
-                                                        }
-                                                    }else{
-                                                        var filteredMesh = usedMeshes.filter(x=> x == (meshName));
-                                                        if(filteredMesh.length){
-                                                            changeMeshes = [...new Set([...filteredMesh,...changeMeshes])];
-                                                        }
-                                                    }
-                                                });
-                                            }
-                                        }else{
-                                            changeMeshes = usedMeshes;
-                                        }
-                                        changeMeshes.forEach(meshName => {
-                                            scene.scene.getMeshById(meshName).material = material;
-                                        })
-                                    }
-                                }else if(typeof actionType !== 'undefined' && actionType == 'mesh' &&
-                                    typeof actionTarget !== 'undefined' && actionTarget &&
-                                    typeof actionTargetSet !== 'undefined' && actionTargetSet
-                                ){
-                                    if(actionTargetSet == 'hide'){
-                                        scene.scene.getMeshById(actionTarget).isVisible = false;
-                                    }else if(actionTargetSet == 'show'){
-                                        scene.scene.getMeshById(actionTarget).isVisible = true;
-                                    }else if(actionTargetSet == 'toggle'){
-                                        scene.scene.getMeshById(actionTarget).isVisible = !scene.scene.getMeshById(actionTarget).isVisible;
-                                    }
-
-
-                                }
-
-
-                            }
-                        }
-                    });
-                    swiper.on('init', function () {
-                        var searchPattern = container.querySelector(' .dc-selected').innerText;
-                        if(searchPattern){
-                            var activeElement = Array.from(container.querySelector(" .swiper-wrapper").querySelectorAll('.swiper-slide')).find(x=> x.innerText == searchPattern);
-                            if(activeElement?.dataset?.swiperSlideIndex){
-                                this.slideToLoop(activeElement?.dataset?.swiperSlideIndex);
-                            }
-                        }else{
-
-                        }
-                        var sliders = this.el.querySelectorAll(' .swiper-slide');
-                        sliders.forEach(slider => {
-                            slider.addEventListener('click', (evt) => {
-                                setTimeout(()=>{
-                                    var scrollContainer = container.querySelector(' .dc-scroll-container');
-                                    scrollContainer.classList.add('hidden');
-                                    canvasContainer.querySelector('.dc-sidebar').classList.remove('open-select');
-                                    scene.deactivateInfoPoints();
-                                }, 250);
-
-                                // if(evt.target.className.includes('swiper-slide-active')){
-                                //     evt.stopPropagation();
-                                // }else{
-                                //     // var slideIndex = evt.target.getAttribute('data-swiper-slide-index');
-                                //     // this.slideToLoop(slideIndex);
-                                //     setTimeout(()=>{
-                                //         var scrollContainer = container.querySelector(' .dc-scroll-container');
-                                //         scrollContainer.classList.add('hidden');
-                                //         canvasContainer.querySelector('.dc-sidebar').classList.remove('open-select');
-                                //     }, 150);
-                                // }
-                            }, false);
-                        });
-                    });
-
-                    setTimeout(()=>{
-                        swiper.init();
-                    }, 100);
-
                 }
+                
+                guiJson = (guiJson)?guiJson:guiJsonDefault; 
+                if(accordionJson || guiJson){
+                    let containerId = scene.sceneContainer; 
+                    console.log(guiJson);
+                    dcbjsGui = new DCGui(containerId,accordionJson, guiJson, 'de',0,1, clickedGui, accordionCreationFinisehd); 
+                    if(accordionJson){
+                        scene.canvas.classList.add('width-66');
+                    }
+                }
+                
+                
+            });
 
-            }
+            
+            <?php if($enableWebshop){ ?>
+                let price = <?= $webshopStartPrice ?>; 
+                let webshopCanvas = document.createElement('div');
+                webshopCanvas.className = "dc-webshop-container";
+                priceContainer = document.createElement('div');
+                webshopCanvas.append(priceContainer); 
+                priceContainer.className = "dc-webshop-price"; 
+                priceContainer.innerHTML = price; 
+
+                mainContainer.append(webshopCanvas); 
+                mainContainer.classList.add('dc-webshop'); 
+
+                webshopBasketButtonCanvas = document.createElement('div');
+                webshopBasketButtonCanvas.className = "dc-webshop-basket-button"; 
+                webshopBasketButtonCanvas.innerHTML = "<?= ($webshopButtonText)?$webshopButtonText:"In den Einkaufswagen"; ?>"; 
+                webshopCanvas.append(webshopBasketButtonCanvas); 
+  <?php 
+            
+            }?>
         });
 
     </script>
-</div>
+
 <?php } ?>
 
 
